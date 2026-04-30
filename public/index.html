@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Terminal OTC - Sniper MTF</title>
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <!-- Versão travada para o Fundo Escuro não quebrar -->
+    <script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
         :root { --bg-dark: #07090e; --panel-bg: #141822; --border: #232836; --green: #089981; --red: #f23645; --orange: #ff9800; --text-main: #e2e5eb; --text-muted: #848e9c; --brand: #2962ff; --purple: #9c27b0;}
@@ -14,7 +15,6 @@
         .logo { font-size: 18px; font-weight: 900; } .logo span { color: var(--brand); }
         .badge-sniper { background: rgba(156, 39, 176, 0.2); color: var(--purple); padding: 3px 8px; border-radius: 4px; font-size: 10px; text-transform: uppercase; margin-left: 10px; border: 1px solid var(--purple);}
         
-        /* NOVO: Menu Superior de Ativos Expandido */
         .asset-nav { background: var(--bg-dark); padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; }
         .asset-nav::-webkit-scrollbar { height: 0; }
         .asset-btn { background: var(--panel-bg); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;}
@@ -33,7 +33,6 @@
         .status-box { background: rgba(8, 153, 129, 0.1); border: 1px dashed var(--green); padding: 15px; border-radius: 8px; text-align: center;}
         .live-price { font-size: 24px; font-weight: bold; color: white; margin-top: 5px;}
 
-        /* HUD MTF (Multi-Timeframe) */
         .confluence-hud { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; }
         .hud-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 5px;}
         
@@ -59,12 +58,10 @@
 <body>
     <header>
         <div class="logo">Auto<span>Trade</span> <span class="badge-sniper">Sniper MTF Mode</span></div>
-        <div style="font-size: 12px; color: var(--text-muted);">Latência: <span style="color: var(--green); font-weight: bold;">24ms</span></div>
+        <div id="conn-status" style="font-size: 12px; color: var(--text-muted);">Servidor: <span style="color: var(--orange); font-weight: bold;">Iniciando...</span></div>
     </header>
 
-    <div class="asset-nav" id="asset-nav">
-        <!-- Botões injetados via JS -->
-    </div>
+    <div class="asset-nav" id="asset-nav"></div>
 
     <div class="main-content">
         <div class="chart-area" style="position: relative;">
@@ -90,9 +87,9 @@
                 </div>
 
                 <div class="hud-title">Gatilhos Locais (M1)</div>
-                <div class="hud-item"><span>Exaustão (RSI 14)</span><span id="hud-rsi" class="hud-value val-neutral">Lendo...</span></div>
-                <div class="hud-item"><span>Agressão (Tick Vol)</span><span id="hud-vol" class="hud-value val-neutral">Lendo...</span></div>
-                <div class="hud-item"><span>Rompimento (Bollinger)</span><span id="hud-bb" class="hud-value val-neutral">Dentro</span></div>
+                <div class="hud-item"><span>Exaustão (RSI 14)</span><span id="hud-rsi" class="hud-value val-neutral">Aguardando vela 1...</span></div>
+                <div class="hud-item"><span>Agressão (Tick Vol)</span><span id="hud-vol" class="hud-value val-neutral">Aguardando vela 1...</span></div>
+                <div class="hud-item"><span>Rompimento (Bollinger)</span><span id="hud-bb" class="hud-value val-neutral">Aguardando vela 1...</span></div>
             </div>
 
             <div class="signal-box" id="signal-box">
@@ -110,7 +107,6 @@
         const ASSETS = ['EURUSD-OTC', 'GBPUSD-OTC', 'USDJPY-OTC', 'EURGBP-OTC', 'USDCHF-OTC', 'AUDUSD-OTC', 'NZDUSD-OTC', 'USDCAD-OTC', 'EURJPY-OTC', 'GBPJPY-OTC'];
         let activeAsset = 'EURUSD-OTC';
 
-        // Constroi o Menu de Ativos
         const nav = document.getElementById('asset-nav');
         ASSETS.forEach(a => {
             const btn = document.createElement('button');
@@ -121,19 +117,16 @@
                 btn.classList.add('active');
                 activeAsset = a;
                 document.getElementById('display-asset-name').innerText = `${a} (1M)`;
-                // Limpa os gráficos para recarregar o novo
                 historyM1 = []; historyM5 = []; historyM15 = [];
                 candleSeries.setData([]); smaSeries.setData([]); bbUpperSeries.setData([]); bbLowerSeries.setData([]);
             };
             nav.appendChild(btn);
         });
 
-        // Configuração do Gráfico
         const chartElement = document.getElementById('live-chart');
         const chart = LightweightCharts.createChart(chartElement, { width: chartElement.clientWidth, height: chartElement.clientHeight, layout: { backgroundColor: '#07090e', textColor: '#d1d4dc' }, grid: { vertLines: { color: '#141822' }, horzLines: { color: '#141822' } }, crosshair: { mode: 0 }, timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#232836' }, rightPriceScale: { borderColor: '#232836' } });
         const candleSeries = chart.addCandlestickSeries({ upColor: '#089981', downColor: '#f23645', borderVisible: false, wickUpColor: '#089981', wickDownColor: '#f23645' });
         
-        // Indicadores no Gráfico
         const smaSeries = chart.addLineSeries({ color: '#ff9800', lineWidth: 1, crosshairMarkerVisible: false });
         const bbUpperSeries = chart.addLineSeries({ color: 'rgba(41, 98, 255, 0.4)', lineWidth: 1, crosshairMarkerVisible: false });
         const bbLowerSeries = chart.addLineSeries({ color: 'rgba(41, 98, 255, 0.4)', lineWidth: 1, crosshairMarkerVisible: false });
@@ -141,33 +134,30 @@
         window.addEventListener('resize', () => chart.applyOptions({ width: chartElement.clientWidth, height: chartElement.clientHeight }));
 
         const socket = io();
-        const ui = { price: document.getElementById('live-price-display'), m1: document.getElementById('mtf-m1'), m5: document.getElementById('mtf-m5'), m15: document.getElementById('mtf-m15'), rsi: document.getElementById('hud-rsi'), vol: document.getElementById('hud-vol'), bb: document.getElementById('hud-bb'), box: document.getElementById('signal-box'), text: document.getElementById('action-text') };
+        const ui = { price: document.getElementById('live-price-display'), m1: document.getElementById('mtf-m1'), m5: document.getElementById('mtf-m5'), m15: document.getElementById('mtf-m15'), rsi: document.getElementById('hud-rsi'), vol: document.getElementById('hud-vol'), bb: document.getElementById('hud-bb'), box: document.getElementById('signal-box'), text: document.getElementById('action-text'), connStatus: document.getElementById('conn-status') };
 
-        // Memória separada por Timeframe
+        socket.on('connect', () => { ui.connStatus.innerHTML = `Servidor: <span style="color: var(--green); font-weight: bold;">Online & Buscando</span>`; });
+
         let historyM1 = [], historyM5 = [], historyM15 = [];
 
         socket.on('nova_vela_mtf', (vela) => {
-            if (vela.ativo !== activeAsset) return; // Ignora moedas não selecionadas
-
+            if (vela.ativo !== activeAsset) return;
             if (vela.timeframe === 60) processarM1(vela);
             else if (vela.timeframe === 300) processarMTF(vela, historyM5, ui.m5);
             else if (vela.timeframe === 900) processarMTF(vela, historyM15, ui.m15);
         });
 
-        // Processa as M15 e M5 (Apenas para checar a cor da vela atual)
         function processarMTF(vela, historyArray, uiElement) {
             const isBull = vela.close > vela.open;
             uiElement.innerText = isBull ? 'COMPRA' : 'VENDA';
             uiElement.className = `mtf-val ${isBull ? 'val-bull' : 'val-bear'}`;
         }
 
-        // Processa o M1 (Motor Principal e Desenho Gráfico)
         function processarM1(vela) {
             candleSeries.update(vela);
             ui.price.innerText = vela.close.toFixed(5);
             ui.price.style.color = vela.close >= vela.open ? 'var(--green)' : 'var(--red)';
 
-            // Gerencia array M1
             if (historyM1.length > 0 && historyM1[historyM1.length - 1].time === vela.time) {
                 historyM1[historyM1.length - 1] = { c: vela.close, v: vela.volume };
             } else {
@@ -176,91 +166,80 @@
             }
 
             const closes = historyM1.map(x => x.c);
-            if (closes.length < 50) return;
+            const vols = historyM1.map(x => x.v);
 
-            // Cálculos Nativos Avançados
+            // A MATEMÁTICA AGORA FUNCIONA DESDE A PRIMEIRA VELA!
             const sma50 = calcSMA(closes, 50);
             const rsi14 = calcRSI(closes, 14);
             const { upper, lower } = calcBollinger(closes, 20, 2);
-            const avgVol = calcAvgVol(historyM1.map(x => x.v), 10);
+            const avgVol = calcAvgVol(vols, 10);
 
             smaSeries.update({ time: vela.time, value: sma50 });
             bbUpperSeries.update({ time: vela.time, value: upper });
             bbLowerSeries.update({ time: vela.time, value: lower });
 
-            // Atualiza o painel M1
-            const isBullM1 = vela.close > closes[closes.length-2];
+            const isBullM1 = vela.close >= (closes[closes.length-2] || vela.open);
             ui.m1.innerText = isBullM1 ? 'COMPRA' : 'VENDA';
             ui.m1.className = `mtf-val ${isBullM1 ? 'val-bull' : 'val-bear'}`;
 
             analisarSniper(vela.close, vela.volume, avgVol, rsi14, upper, lower);
         }
 
-        // AS FUNÇÕES DE CÁLCULO
-        function calcSMA(data, p) { return data.slice(-p).reduce((a, b) => a + b) / p; }
-        function calcAvgVol(vols, p) { return vols.slice(-p).reduce((a, b) => a + b) / Math.min(vols.length, p); }
-        
+        function calcSMA(data, p) {
+            const len = Math.min(data.length, p);
+            if(len === 0) return 0;
+            return data.slice(-len).reduce((a, b) => a + b) / len; 
+        }
+        function calcAvgVol(vols, p) {
+            const len = Math.min(vols.length, p);
+            if(len === 0) return 0;
+            return vols.slice(-len).reduce((a, b) => a + b) / len; 
+        }
         function calcBollinger(data, p, std) {
-            const slice = data.slice(-p);
-            const sma = slice.reduce((a,b)=>a+b)/p;
-            const variance = slice.reduce((a,b)=>a + Math.pow(b-sma, 2), 0) / p;
+            const len = Math.min(data.length, p);
+            if(len === 0) return { upper: 0, lower: 0 };
+            const slice = data.slice(-len);
+            const sma = slice.reduce((a,b)=>a+b)/len;
+            const variance = slice.reduce((a,b)=>a + Math.pow(b-sma, 2), 0) / len;
             const dev = Math.sqrt(variance);
             return { upper: sma + (dev * std), lower: sma - (dev * std) };
         }
-
         function calcRSI(data, p) {
+            const len = Math.min(data.length, p + 1);
+            if(len < 2) return 50; 
             let g = 0, l = 0;
-            for (let i = data.length - p - 1; i < data.length - 1; i++) {
+            for (let i = data.length - len; i < data.length - 1; i++) {
                 const diff = data[i+1] - data[i];
                 if (diff >= 0) g += diff; else l -= diff;
             }
             if(l===0) return 100;
-            return 100 - (100 / (1 + (g/p) / (l/p)));
+            return 100 - (100 / (1 + (g/(len-1)) / (l/(len-1))));
         }
 
-        // MOTOR DE EXECUÇÃO SNIPER
         function analisarSniper(preco, vol, avgVol, rsi, bbUpper, bbLower) {
-            
-            // 1. Hud Volume
-            const temVolume = vol > (avgVol * 1.2); // Volume 20% acima da média
+            const temVolume = vol > (avgVol * 1.1); 
             ui.vol.innerText = temVolume ? 'ALTA (Aprovado)' : 'BAIXA (Bloqueado)';
             ui.vol.className = `hud-value ${temVolume ? 'val-bull' : 'val-bear'}`;
 
-            // 2. Hud RSI
             ui.rsi.innerText = rsi.toFixed(1);
             ui.rsi.className = `hud-value ${rsi > 65 ? 'val-bear' : (rsi < 35 ? 'val-bull' : 'val-neutral')}`;
 
-            // 3. Hud Bollinger (Rompimento)
             const rompeuCima = preco >= bbUpper;
             const rompeuBaixo = preco <= bbLower;
             if(rompeuCima) { ui.bb.innerText = 'Rompimento CIMA'; ui.bb.className = 'hud-value val-bear'; }
             else if(rompeuBaixo) { ui.bb.innerText = 'Rompimento BAIXO'; ui.bb.className = 'hud-value val-bull'; }
             else { ui.bb.innerText = 'Dentro do Canal'; ui.bb.className = 'hud-value val-neutral'; }
 
-            // 4. Confluência de MTF (O filtro mestre)
-            const m1Text = ui.m1.innerText;
-            const m5Text = ui.m5.innerText;
-            const m15Text = ui.m15.innerText;
+            const m1Text = ui.m1.innerText; const m5Text = ui.m5.innerText; const m15Text = ui.m15.innerText;
             const mtfComprador = (m1Text === 'COMPRA' && m5Text === 'COMPRA' && m15Text === 'COMPRA');
             const mtfVendedor = (m1Text === 'VENDA' && m5Text === 'VENDA' && m15Text === 'VENDA');
 
-            // --- LÓGICA DE GATILHO ---
-            // Para COMPRAR (CALL): MTF de Alta + Rompeu Bollinger para BAIXO (Exaustão) + RSI Sobrevendido + Volume forte
-            if (mtfComprador && rompeuBaixo && rsi < 35 && temVolume) {
-                ui.box.style.borderColor = 'var(--green)';
-                ui.text.innerText = 'COMPRA (CALL)';
-                ui.text.style.color = 'var(--green)';
-            }
-            // Para VENDER (PUT): MTF de Baixa + Rompeu Bollinger para CIMA (Exaustão) + RSI Sobrecomprado + Volume forte
-            else if (mtfVendedor && rompeuCima && rsi > 65 && temVolume) {
-                ui.box.style.borderColor = 'var(--red)';
-                ui.text.innerText = 'VENDA (PUT)';
-                ui.text.style.color = 'var(--red)';
-            }
-            else {
-                ui.box.style.borderColor = 'var(--border)';
-                ui.text.innerText = 'FILTRANDO...';
-                ui.text.style.color = 'var(--text-muted)';
+            if (mtfComprador && rompeuBaixo && rsi < 40 && temVolume) {
+                ui.box.style.borderColor = 'var(--green)'; ui.text.innerText = 'COMPRA (CALL)'; ui.text.style.color = 'var(--green)';
+            } else if (mtfVendedor && rompeuCima && rsi > 60 && temVolume) {
+                ui.box.style.borderColor = 'var(--red)'; ui.text.innerText = 'VENDA (PUT)'; ui.text.style.color = 'var(--red)';
+            } else {
+                ui.box.style.borderColor = 'var(--border)'; ui.text.innerText = 'FILTRANDO...'; ui.text.style.color = 'var(--text-muted)';
             }
         }
     </script>
