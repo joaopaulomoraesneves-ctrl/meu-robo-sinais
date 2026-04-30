@@ -3,531 +3,266 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SaaS Trading - Versão Master V5</title>
+    <title>Terminal OTC - Sniper MTF</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
     <style>
-        :root { --bg-dark: #07090e; --panel-bg: #141822; --border: #232836; --green: #089981; --red: #f23645; --orange: #ff9800; --text-main: #e2e5eb; --text-muted: #848e9c; --brand: #2962ff; }
-        * { box-sizing: border-box; }
-        body { margin: 0; background-color: var(--bg-dark); color: var(--text-main); font-family: 'Inter', -apple-system, sans-serif; display: flex; height: 100vh; overflow: hidden; }
-        ::-webkit-scrollbar { width: 4px; height: 4px; } ::-webkit-scrollbar-track { background: var(--bg-dark); } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        .no-select { user-select: none; -webkit-user-select: none; }
-
-        .sidebar-nav { width: 220px; background: var(--panel-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0;}
-        .brand-logo { padding: 20px; font-size: 18px; font-weight: 900; border-bottom: 1px solid var(--border); }
-        .brand-logo span { color: var(--brand); }
-        .nav-menu { padding: 15px 0; flex: 1; overflow-y: auto; }
-        .nav-item { padding: 12px 20px; color: var(--text-muted); font-size: 14px; font-weight: 500; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;}
-        .nav-item:hover, .nav-item.active { background: rgba(41, 98, 255, 0.1); color: var(--brand); border-left: 3px solid var(--brand); }
+        :root { --bg-dark: #07090e; --panel-bg: #141822; --border: #232836; --green: #089981; --red: #f23645; --orange: #ff9800; --text-main: #e2e5eb; --text-muted: #848e9c; --brand: #2962ff; --purple: #9c27b0;}
+        body { margin: 0; background-color: var(--bg-dark); color: var(--text-main); font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        .main-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        header { background: var(--panel-bg); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px;}
-        .header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;}
-        .asset-selector { background: var(--bg-dark); color: white; border: 1px solid var(--border); padding: 8px; border-radius: 6px; font-size: 14px; font-weight: bold; outline: none; }
-        .audio-toggle { background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-muted); padding: 8px; border-radius: 6px; cursor: pointer; }
-        .audio-toggle.active { color: var(--green); border-color: var(--green); }
+        header { background: var(--panel-bg); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+        .logo { font-size: 18px; font-weight: 900; } .logo span { color: var(--brand); }
+        .badge-sniper { background: rgba(156, 39, 176, 0.2); color: var(--purple); padding: 3px 8px; border-radius: 4px; font-size: 10px; text-transform: uppercase; margin-left: 10px; border: 1px solid var(--purple);}
         
-        .top-stats { display: flex; gap: 10px; flex-wrap: wrap; }
-        .stat-box { background: var(--bg-dark); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 11px; }
-        .stat-val { font-size: 14px; font-weight: bold; margin-top: 2px; }
+        /* NOVO: Menu Superior de Ativos Expandido */
+        .asset-nav { background: var(--bg-dark); padding: 10px 20px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; }
+        .asset-nav::-webkit-scrollbar { height: 0; }
+        .asset-btn { background: var(--panel-bg); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 15px; border-radius: 20px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s;}
+        .asset-btn.active { background: rgba(41, 98, 255, 0.2); color: var(--brand); border-color: var(--brand); }
 
-        .view-section { display: none; height: calc(100vh - 65px); width: 100%; }
-        .view-section.active { display: flex; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        .left-content { flex: 1; min-width: 55%; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
-        .chart-area { flex: 1; position: relative; background: #07090e; min-height: 300px;}
+        .main-content { display: flex; flex: 1; overflow: hidden; }
         
-        .history-panel { height: 160px; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; flex-direction: column; }
-        .history-header { padding: 8px 15px; font-size: 12px; font-weight: bold; color: var(--text-muted); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;}
-        .history-list { flex: 1; overflow-y: auto; padding: 0 5px; }
-        .history-item { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; padding: 10px; border-bottom: 1px solid var(--border); font-size: 12px; align-items: center; }
-        .badge-win { background: rgba(8, 153, 129, 0.1); color: var(--green); padding: 4px; border-radius: 4px; font-weight: bold; text-align: center;}
-        .badge-loss { background: rgba(242, 54, 69, 0.1); color: var(--red); padding: 4px; border-radius: 4px; font-weight: bold; text-align: center;}
+        .chart-area { flex: 1; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+        .chart-legend { position: absolute; top: 20px; left: 20px; z-index: 10; font-size: 11px; font-weight: bold; display: flex; flex-direction: column; gap: 5px; pointer-events: none;}
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+        .legend-color { width: 10px; height: 10px; border-radius: 2px; }
+        #live-chart { flex: 1; width: 100%; position: relative; }
 
-        .side-panel { width: 340px; background: var(--bg-dark); display: flex; flex-direction: column; padding: 15px; gap: 15px; overflow-y: auto; flex-shrink: 0;}
+        .side-panel { width: 360px; background: var(--bg-dark); padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
 
-        .market-status { background: var(--panel-bg); border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; text-align: center; display: flex; justify-content: space-between; align-items: center;}
-        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-        .status-aberto { background: var(--green); box-shadow: 0 0 8px var(--green); }
-        .status-fechado { background: var(--red); box-shadow: 0 0 8px var(--red); }
+        .status-box { background: rgba(8, 153, 129, 0.1); border: 1px dashed var(--green); padding: 15px; border-radius: 8px; text-align: center;}
+        .live-price { font-size: 24px; font-weight: bold; color: white; margin-top: 5px;}
 
-        .tech-widget-container { height: 220px; width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: var(--panel-bg); }
-
-        .auto-trade-box { background: rgba(41, 98, 255, 0.05); border: 1px solid rgba(41, 98, 255, 0.2); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;}
-        .toggle-switch { position: relative; width: 40px; height: 20px; background: var(--border); border-radius: 20px; transition: 0.3s; }
-        .toggle-switch::after { content: ''; position: absolute; width: 16px; height: 16px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s; }
-        .toggle-switch.active { background: var(--brand); }
-        .toggle-switch.active::after { left: 22px; }
-
-        .tf-selector { display: flex; gap: 8px; }
-        .tf-btn { flex: 1; background: var(--panel-bg); border: 1px solid var(--border); color: var(--text-muted); padding: 8px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s;}
-        .tf-btn.active { background: var(--brand); color: white; border-color: var(--brand); }
-
-        .signal-box { background: var(--panel-bg); border-radius: 8px; padding: 15px; text-align: center; border: 1px solid var(--border); transition: 0.3s;}
-        .action-text { font-size: 24px; font-weight: 900; margin: 5px 0; color: var(--text-muted); }
-        .timer-container { margin-top: 10px; display: none; background: rgba(255, 152, 0, 0.1); padding: 8px; border-radius: 8px; border: 1px dashed var(--orange); }
-        .timer-bar-bg { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; margin-top: 5px; overflow: hidden;}
-        .timer-bar-fill { height: 100%; width: 100%; background: var(--orange); transition: width 0.1s linear; }
-
-        .checklist-box { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
-        .check-item { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 4px;}
-        .check-ok { color: var(--green); font-weight: bold; }
-        .check-wait { color: var(--orange); font-weight: bold; }
-
-        .input-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; width: 100%;}
-        .input-group label { font-size: 12px; color: var(--text-muted); width: 45%;}
-        .input-control { background: var(--bg-dark); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 4px; width: 55%; font-size: 12px; outline: none;}
+        /* HUD MTF (Multi-Timeframe) */
+        .confluence-hud { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; }
+        .hud-title { font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: bold; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 5px;}
         
-        /* Adição Restaurada: Texto de Risco */
-        .risk-feedback { font-size: 10px; color: var(--text-muted); text-align: right; margin-top: -5px; margin-bottom: 10px; display: block; }
+        .mtf-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .mtf-box { background: var(--bg-dark); border: 1px solid var(--border); padding: 10px; border-radius: 6px; text-align: center; }
+        .mtf-label { font-size: 10px; color: var(--text-muted); margin-bottom: 5px; }
+        .mtf-val { font-size: 14px; font-weight: 900; }
+        
+        .hud-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px; font-weight: 500;}
+        .hud-value { padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px;}
+        
+        .val-neutral { background: var(--border); color: var(--text-main); }
+        .val-bull { background: rgba(8, 153, 129, 0.2); color: var(--green); }
+        .val-bear { background: rgba(242, 54, 69, 0.2); color: var(--red); }
 
-        .btn-primary { background: var(--brand); color: white; border: none; padding: 14px; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 5px; transition: 0.2s;}
-        .btn-primary:disabled { background: var(--border); color: var(--text-muted); }
+        .signal-box { background: var(--panel-bg); border-radius: 8px; padding: 20px; text-align: center; border: 2px solid var(--border); transition: 0.3s;}
+        .action-text { font-size: 26px; font-weight: 900; margin: 10px 0; color: var(--text-muted); }
+        .alert-note { background: rgba(156, 39, 176, 0.1); border-left: 3px solid var(--purple); padding: 12px; font-size: 11px; color: #d1d4dc; border-radius: 0 4px 4px 0; line-height: 1.4;}
 
-        .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999;}
-        .toast { background: var(--panel-bg); border-left: 4px solid var(--brand); color: white; padding: 12px 15px; border-radius: 6px; font-size: 12px; opacity: 1; }
-        .toast.success { border-left-color: var(--green); }
-        .toast.error { border-left-color: var(--red); }
-
-        .conn-status { font-size: 11px; display: flex; align-items: center; gap: 4px; color: var(--text-muted); margin-top: 5px; }
-        .conn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); box-shadow: 0 0 4px var(--red);}
-        .conn-dot.online { background: var(--green); box-shadow: 0 0 4px var(--green);}
-
-        .generic-view-content { padding: 20px; flex: 1; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start;}
-        .card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; width: 100%; max-width: 500px;}
-
-        @media (max-width: 768px) {
-            body { flex-direction: column; overflow-y: auto; }
-            .sidebar-nav { width: 100%; height: auto; flex-direction: row; border-right: none; border-bottom: 1px solid var(--border); overflow-x: auto;}
-            .brand-logo { display: none; } 
-            .nav-menu { display: flex; padding: 0; }
-            .nav-item { padding: 15px; border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
-            .nav-item:hover, .nav-item.active { border-left: none; border-bottom: 3px solid var(--brand); background: transparent; }
-            .main-wrapper { overflow-y: auto; }
-            .view-section.active { flex-direction: column; height: auto; }
-            .left-content { min-width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
-            .chart-area { min-height: 400px; } 
-            .history-panel { height: 200px; }
-            .side-panel { width: 100%; padding: 15px; }
-        }
+        @media (max-width: 768px) { .main-content { flex-direction: column; overflow-y: auto; } .chart-area { min-height: 400px; border-right: none; border-bottom: 1px solid var(--border); } .side-panel { width: 100%; } }
     </style>
 </head>
 <body>
-    <div class="sidebar-nav no-select">
-        <div class="brand-logo">Auto<span>Trade</span></div>
-        <div class="nav-menu">
-            <div class="nav-item active" data-target="view-sinais">📈 Sinais</div>
-            <div class="nav-item" data-target="view-telegram">🤖 Telegram</div>
-            <div class="nav-item" data-target="view-config">⚙️ API</div>
+    <header>
+        <div class="logo">Auto<span>Trade</span> <span class="badge-sniper">Sniper MTF Mode</span></div>
+        <div style="font-size: 12px; color: var(--text-muted);">Latência: <span style="color: var(--green); font-weight: bold;">24ms</span></div>
+    </header>
+
+    <div class="asset-nav" id="asset-nav">
+        <!-- Botões injetados via JS -->
+    </div>
+
+    <div class="main-content">
+        <div class="chart-area" style="position: relative;">
+            <div class="chart-legend">
+                <div class="legend-item"><div class="legend-color" style="background: rgba(41, 98, 255, 0.3);"></div> Banda de Bollinger (20, 2)</div>
+                <div class="legend-item"><div class="legend-color" style="background: #ff9800;"></div> SMA 50</div>
+            </div>
+            <div id="live-chart"></div>
+        </div>
+
+        <div class="side-panel">
+            <div class="status-box">
+                <div style="font-size: 12px; color: var(--green); font-weight: bold; text-transform: uppercase;" id="display-asset-name">EURUSD-OTC (1M)</div>
+                <div class="live-price" id="live-price-display">0.00000</div>
+            </div>
+
+            <div class="confluence-hud">
+                <div class="hud-title">Triagem Macro (MTF)</div>
+                <div class="mtf-grid">
+                    <div class="mtf-box"><div class="mtf-label">1 MINUTO</div><div id="mtf-m1" class="mtf-val val-neutral">-</div></div>
+                    <div class="mtf-box"><div class="mtf-label">5 MINUTOS</div><div id="mtf-m5" class="mtf-val val-neutral">-</div></div>
+                    <div class="mtf-box"><div class="mtf-label">15 MINUTOS</div><div id="mtf-m15" class="mtf-val val-neutral">-</div></div>
+                </div>
+
+                <div class="hud-title">Gatilhos Locais (M1)</div>
+                <div class="hud-item"><span>Exaustão (RSI 14)</span><span id="hud-rsi" class="hud-value val-neutral">Lendo...</span></div>
+                <div class="hud-item"><span>Agressão (Tick Vol)</span><span id="hud-vol" class="hud-value val-neutral">Lendo...</span></div>
+                <div class="hud-item"><span>Rompimento (Bollinger)</span><span id="hud-bb" class="hud-value val-neutral">Dentro</span></div>
+            </div>
+
+            <div class="signal-box" id="signal-box">
+                <div style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; font-weight: bold;">Gatilho Sniper</div>
+                <div class="action-text" id="action-text">FILTRANDO...</div>
+            </div>
+
+            <div class="alert-note">
+                <strong>Filtro de Ouro:</strong> Sinais apenas quando as 3 janelas de tempo concordarem na direção E ocorrer rompimento extremo de banda com confirmação de volume. 
+            </div>
         </div>
     </div>
 
-    <div class="main-wrapper">
-        <header>
-            <div class="header-left">
-                <select id="asset-selector" class="asset-selector">
-                    <option value="FX:EURUSD">🇪🇺🇺🇸 EUR/USD</option>
-                    <option value="FX:GBPUSD">🇬🇧🇺🇸 GBP/USD</option>
-                    <option value="BINANCE:BTCUSDT">₿ Bitcoin</option>
-                </select>
-                <button id="btn-audio" class="audio-toggle">🔇</button>
-            </div>
-            <div class="top-stats">
-                <div class="stat-box">Win Rate<div class="stat-val" style="color: var(--brand);" id="winrate-display">0%</div></div>
-                <div class="stat-box">Banca<div class="stat-val" style="color: var(--text-main);" id="balance-display">R$ 0,00</div></div>
-                <div class="stat-box">Lucro<div class="stat-val" style="color: var(--green);" id="profit-display">+ R$ 0,00</div></div>
-            </div>
-        </header>
-
-        <section id="view-sinais" class="view-section active">
-            <div class="left-content">
-                <div class="chart-area" id="chart-container"><div id="tradingview_chart" style="height: 100%; width: 100%;"></div></div>
-                <div class="history-panel">
-                    <div class="history-header">
-                        <span>Histórico de Operações</span>
-                        <div class="conn-status" id="ws-status"><div class="conn-dot" id="ws-dot"></div> Conectando...</div>
-                    </div>
-                    <div class="history-list" id="history-list">
-                        <div id="empty-history" style="text-align: center; color: var(--text-muted); margin-top: 30px; font-size: 13px;">Nenhuma operação no cache.</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="side-panel">
-                <div class="market-status">
-                    <span>Horário Operacional:</span>
-                    <span id="market-time-status" style="color: var(--text-muted);">Verificando...</span>
-                </div>
-
-                <div class="auto-trade-box no-select" id="btn-autotrade">
-                    <div>
-                        <div style="font-weight: bold; font-size: 13px; color: white;">Auto-Execução (Nuvem)</div>
-                    </div>
-                    <div class="toggle-switch" id="autotrade-toggle"></div>
-                </div>
-
-                <div class="tf-selector no-select">
-                    <button class="tf-btn" data-tf="M1">1 Min</button>
-                    <button class="tf-btn active" data-tf="M5">5 Min</button>
-                    <button class="tf-btn" data-tf="M15">15 Min</button>
-                </div>
-
-                <div class="tech-widget-container" id="tech-widget-container"></div>
-
-                <div class="signal-box" id="signal-box">
-                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;" id="signal-tf-label">Ação Recomendada (M5)</div>
-                    <div class="action-text" id="action-text">ANALISANDO...</div>
-                    <div id="timer-container" class="timer-container">
-                        <div style="font-size: 12px; font-weight: bold; color: var(--text-main); display: flex; justify-content: space-between;">
-                            <span>Expiração:</span> <span id="timer-seconds">0.0s</span>
-                        </div>
-                        <div class="timer-bar-bg"><div class="timer-bar-fill" id="timer-bar"></div></div>
-                    </div>
-                </div>
-
-                <div class="checklist-box">
-                    <div class="check-item"><span>Filtro de Notícias (Macro)</span><span id="chk-news" class="check-wait">Lendo...</span></div>
-                    <div class="check-item"><span>Alinhamento de Tendência</span><span id="chk-trend" class="check-wait">Lendo...</span></div>
-                    <div class="check-item"><span>Aprovação SMC (Bancos)</span><span id="chk-smc" class="check-wait">Lendo...</span></div>
-                </div>
-
-                <div style="background: var(--panel-bg); border-radius: 8px; padding: 15px; border: 1px solid var(--border);">
-                    <div class="input-group">
-                        <label>Entrada Inicial:</label>
-                        <input type="number" id="input-mao" class="input-control" value="50">
-                    </div>
-                    <span id="risk-feedback" class="risk-feedback">Risco: 1.1% da banca</span>
-
-                    <div class="input-group">
-                        <label>Martingale:</label>
-                        <select id="input-gale" class="input-control"><option value="0">Desativado</option><option value="1">Até 1 Nível</option></select>
-                    </div>
-                    <button class="btn-primary" id="btn-manual-trade" disabled>Aguardando Oportunidade...</button>
-                </div>
-            </div>
-        </section>
-
-        <section id="view-telegram" class="view-section">
-            <div class="generic-view-content">
-                <div class="card">
-                    <h2>🤖 Bot Telegram API</h2>
-                    <p>Conecte para disparar sinais no seu celular e ser avisado dos acertos em tempo real.</p>
-                    <div class="input-group"><label>Bot Token:</label><input type="password" id="tg-token" class="input-control" placeholder="123456:ABC-DEF1234ghIkl"></div>
-                    <div class="input-group"><label>Chat ID:</label><input type="text" id="tg-chat" class="input-control" placeholder="-1001234567890"></div>
-                    <div style="display: flex; gap: 10px; margin-top: 15px;">
-                        <button class="btn-primary" id="btn-save-tg" style="background: var(--bg-dark); border: 1px solid var(--border);">Salvar Dados</button>
-                        <button class="btn-primary" id="btn-test-tg">Testar Alerta</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="view-config" class="view-section">
-            <div class="generic-view-content">
-                <div class="card">
-                    <h2>⚙️ API Corretora</h2>
-                    <p>Vincule para liberar a Auto-Execução (Copy) pelo Servidor.</p>
-                    <div class="input-group">
-                        <label>Corretora:</label>
-                        <select id="api-broker" class="input-control"><option value="none">Selecione...</option><option value="quotex">Quotex</option><option value="iqoption">IQ Option</option></select>
-                    </div>
-                    <div class="input-group"><label>Chave API:</label><input type="password" id="api-public" class="input-control"></div>
-                    <button class="btn-primary" id="btn-save-api">Conectar e Salvar</button>
-                </div>
-            </div>
-        </section>
-    </div>
-    
-    <div class="toast-container" id="toast-container"></div>
-
-    <script src="/socket.io/socket.io.js"></script>
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-    
     <script>
-        class TradingApp {
-            constructor() {
-                this.state = {
-                    balance: 4250.00, dailyProfit: 0.00, totalWins: 0, totalLosses: 0,
-                    activeAsset: 'FX:EURUSD', activeTF: 'M5', tradeHistory: [],
-                    isAutoTrade: false, baseTradeAmount: 50, currentTradeAmount: 50, 
-                    martingaleMaxLevel: 0, currentMartingaleStep: 0, systemLocked: false, 
-                    signalActive: false, timerInterval: null, marketTimeout: null, audioEnabled: false, apiConnected: false,
-                    tfConfig: { 
-                        'M1': { windowMs: 5000, chartInterval: "1", techInt: "1m" },
-                        'M5': { windowMs: 10000, chartInterval: "5", techInt: "5m" }, 
-                        'M15': { windowMs: 20000, chartInterval: "15", techInt: "15m" } 
-                    }
-                };
-                
-                this.ui = {
-                    assetSelector: document.getElementById('asset-selector'), balanceDisplay: document.getElementById('balance-display'),
-                    profitDisplay: document.getElementById('profit-display'), winrateDisplay: document.getElementById('winrate-display'),
-                    btnAutoTrade: document.getElementById('btn-autotrade'), toggleAutoTrade: document.getElementById('autotrade-toggle'),
-                    signalBox: document.getElementById('signal-box'), actionText: document.getElementById('action-text'),
-                    timerContainer: document.getElementById('timer-container'), timerSeconds: document.getElementById('timer-seconds'),
-                    timerBar: document.getElementById('timer-bar'), inputMao: document.getElementById('input-mao'),
-                    inputGale: document.getElementById('input-gale'), btnManualTrade: document.getElementById('btn-manual-trade'),
-                    navItems: document.querySelectorAll('.nav-item'), viewSections: document.querySelectorAll('.view-section'),
-                    signalTfLabel: document.getElementById('signal-tf-label'), tfButtons: document.querySelectorAll('.tf-btn'),
-                    historyList: document.getElementById('history-list'), emptyHistory: document.getElementById('empty-history'),
-                    btnAudio: document.getElementById('btn-audio'), wsDot: document.getElementById('ws-dot'), wsStatus: document.getElementById('ws-status'), 
-                    btnSaveApi: document.getElementById('btn-save-api'), marketTimeStatus: document.getElementById('market-time-status'), 
-                    techWidgetContainer: document.getElementById('tech-widget-container'), chkNews: document.getElementById('chk-news'), 
-                    chkTrend: document.getElementById('chk-trend'), chkSmc: document.getElementById('chk-smc'), riskFeedback: document.getElementById('risk-feedback'),
-                    tgToken: document.getElementById('tg-token'), tgChat: document.getElementById('tg-chat'), btnSaveTg: document.getElementById('btn-save-tg'), btnTestTg: document.getElementById('btn-test-tg')
-                };
-                
-                this.init();
-            }
+        const ASSETS = ['EURUSD-OTC', 'GBPUSD-OTC', 'USDJPY-OTC', 'EURGBP-OTC', 'USDCHF-OTC', 'AUDUSD-OTC', 'NZDUSD-OTC', 'USDCAD-OTC', 'EURJPY-OTC', 'GBPJPY-OTC'];
+        let activeAsset = 'EURUSD-OTC';
 
-            init() {
-                this.loadLocalStorage();
-                this.renderHistoryList(); // Restaura o histórico na tela ao iniciar
-                this.loadChartAndWidget(); 
-                this.checkMarketHours();
-                this.bindEvents(); 
-                this.updateFinancialUI();
-                setInterval(() => this.checkMarketHours(), 60000);
-                try { this.connectToServer(); } catch(e) { this.startMarketLoop(); }
-            }
+        // Constroi o Menu de Ativos
+        const nav = document.getElementById('asset-nav');
+        ASSETS.forEach(a => {
+            const btn = document.createElement('button');
+            btn.className = `asset-btn ${a === activeAsset ? 'active' : ''}`;
+            btn.innerText = a.replace('-OTC', '');
+            btn.onclick = () => {
+                document.querySelectorAll('.asset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeAsset = a;
+                document.getElementById('display-asset-name').innerText = `${a} (1M)`;
+                // Limpa os gráficos para recarregar o novo
+                historyM1 = []; historyM5 = []; historyM15 = [];
+                candleSeries.setData([]); smaSeries.setData([]); bbUpperSeries.setData([]); bbLowerSeries.setData([]);
+            };
+            nav.appendChild(btn);
+        });
 
-            checkMarketHours() {
-                const agora = new Date(); const hora = agora.getHours(); const dia = agora.getDay();
-                const aberto = !(dia === 0 || dia === 6) && hora >= 8 && hora < 18;
-                if (aberto) {
-                    this.ui.marketTimeStatus.innerHTML = `<span class="status-dot status-aberto"></span> <span style="color: var(--green)">Aberto</span>`;
-                    this.state.systemLocked = false;
-                } else {
-                    this.ui.marketTimeStatus.innerHTML = `<span class="status-dot status-fechado"></span> <span style="color: var(--red)">Fechado</span>`;
-                    this.state.systemLocked = true; this.resetSignalUI(); this.ui.actionText.innerText = 'MERCADO FECHADO';
-                }
-            }
+        // Configuração do Gráfico
+        const chartElement = document.getElementById('live-chart');
+        const chart = LightweightCharts.createChart(chartElement, { width: chartElement.clientWidth, height: chartElement.clientHeight, layout: { backgroundColor: '#07090e', textColor: '#d1d4dc' }, grid: { vertLines: { color: '#141822' }, horzLines: { color: '#141822' } }, crosshair: { mode: 0 }, timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#232836' }, rightPriceScale: { borderColor: '#232836' } });
+        const candleSeries = chart.addCandlestickSeries({ upColor: '#089981', downColor: '#f23645', borderVisible: false, wickUpColor: '#089981', wickDownColor: '#f23645' });
+        
+        // Indicadores no Gráfico
+        const smaSeries = chart.addLineSeries({ color: '#ff9800', lineWidth: 1, crosshairMarkerVisible: false });
+        const bbUpperSeries = chart.addLineSeries({ color: 'rgba(41, 98, 255, 0.4)', lineWidth: 1, crosshairMarkerVisible: false });
+        const bbLowerSeries = chart.addLineSeries({ color: 'rgba(41, 98, 255, 0.4)', lineWidth: 1, crosshairMarkerVisible: false });
 
-            loadChartAndWidget() {
-                document.getElementById('tradingview_chart').innerHTML = ''; 
-                new TradingView.widget({ "autosize": true, "symbol": this.state.activeAsset, "interval": this.state.tfConfig[this.state.activeTF].chartInterval, "theme": "dark", "style": "1", "backgroundColor": "#07090e", "hide_top_toolbar": true, "container_id": "tradingview_chart" });
-                this.ui.techWidgetContainer.innerHTML = '';
-                const script = document.createElement('script'); script.type = 'text/javascript'; script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js'; script.async = true;
-                script.innerHTML = JSON.stringify({ "interval": this.state.tfConfig[this.state.activeTF].techInt, "width": "100%", "isTransparent": true, "height": "100%", "symbol": this.state.activeAsset, "showIntervalTabs": false, "displayMode": "single", "locale": "br", "colorTheme": "dark" });
-                this.ui.techWidgetContainer.appendChild(script);
-            }
+        window.addEventListener('resize', () => chart.applyOptions({ width: chartElement.clientWidth, height: chartElement.clientHeight }));
 
-            loadLocalStorage() {
-                const data = JSON.parse(localStorage.getItem('saasData') || '{}');
-                if(data.balance) this.state.balance = data.balance;
-                if(data.dailyProfit) this.state.dailyProfit = data.dailyProfit;
-                if(data.totalWins) this.state.totalWins = data.totalWins;
-                if(data.totalLosses) this.state.totalLosses = data.totalLosses;
-                if(data.apiBroker) this.state.apiConnected = true;
-                if(data.tradeHistory) this.state.tradeHistory = data.tradeHistory;
-                if(data.tgToken) this.ui.tgToken.value = data.tgToken;
-                if(data.tgChat) this.ui.tgChat.value = data.tgChat;
-            }
+        const socket = io();
+        const ui = { price: document.getElementById('live-price-display'), m1: document.getElementById('mtf-m1'), m5: document.getElementById('mtf-m5'), m15: document.getElementById('mtf-m15'), rsi: document.getElementById('hud-rsi'), vol: document.getElementById('hud-vol'), bb: document.getElementById('hud-bb'), box: document.getElementById('signal-box'), text: document.getElementById('action-text') };
 
-            saveLocalStorage() {
-                const dataToSave = { 
-                    balance: this.state.balance, dailyProfit: this.state.dailyProfit, totalWins: this.state.totalWins, totalLosses: this.state.totalLosses,
-                    apiBroker: this.state.apiConnected ? 'conectado' : null, tradeHistory: this.state.tradeHistory,
-                    tgToken: this.ui.tgToken.value, tgChat: this.ui.tgChat.value
-                };
-                localStorage.setItem('saasData', JSON.stringify(dataToSave));
-            }
+        // Memória separada por Timeframe
+        let historyM1 = [], historyM5 = [], historyM15 = [];
 
-            connectToServer() {
-                if(typeof io !== 'undefined') {
-                    this.socket = io(); 
-                    this.socket.on('connect', () => {
-                        this.ui.wsDot.classList.add('online'); this.ui.wsStatus.innerHTML = `<div class="conn-dot online"></div> Online`;
-                        // Envia credenciais do Telegram para o Backend assim que conecta
-                        this.socket.emit('config_telegram', { token: this.ui.tgToken.value, chatId: this.ui.tgChat.value });
-                        this.startMarketLoop();
-                    });
-                    this.socket.on('disconnect', () => { this.ui.wsDot.classList.remove('online'); this.ui.wsStatus.innerHTML = `<div class="conn-dot"></div> Offline`; });
-                    this.socket.on('notificacao', (data) => this.showToast(data.msg, data.tipo));
-                    this.socket.on('resultado_ordem', (data) => setTimeout(() => this.processTradeResult(), 3000));
-                } else { this.startMarketLoop(); }
-            }
+        socket.on('nova_vela_mtf', (vela) => {
+            if (vela.ativo !== activeAsset) return; // Ignora moedas não selecionadas
 
-            bindEvents() {
-                this.ui.navItems.forEach(item => item.addEventListener('click', (e) => {
-                    this.ui.navItems.forEach(nav => nav.classList.remove('active')); item.classList.add('active');
-                    this.ui.viewSections.forEach(sec => sec.classList.remove('active'));
-                    document.getElementById(item.getAttribute('data-target')).classList.add('active');
-                }));
-                this.ui.btnAudio.addEventListener('click', () => { this.state.audioEnabled = !this.state.audioEnabled; this.ui.btnAudio.innerText = this.state.audioEnabled ? '🔊' : '🔇'; this.ui.btnAudio.classList.toggle('active', this.state.audioEnabled);});
-                this.ui.assetSelector.addEventListener('change', (e) => { this.state.activeAsset = e.target.value; this.loadChartAndWidget(); this.resetSignalUI(); });
-                this.ui.tfButtons.forEach(btn => btn.addEventListener('click', (e) => {
-                    this.ui.tfButtons.forEach(b => b.classList.remove('active')); e.target.classList.add('active');
-                    this.state.activeTF = e.target.getAttribute('data-tf'); this.ui.signalTfLabel.innerText = `Ação Recomendada (${this.state.activeTF})`;
-                    this.loadChartAndWidget(); this.resetSignalUI();
-                }));
-                
-                // Telegram e API Events
-                this.ui.btnSaveTg.addEventListener('click', () => { 
-                    this.saveLocalStorage(); this.showToast("Configurações do Telegram salvas!", "success"); 
-                    if(this.socket) this.socket.emit('config_telegram', { token: this.ui.tgToken.value, chatId: this.ui.tgChat.value });
-                });
-                this.ui.btnTestTg.addEventListener('click', () => { this.showToast("Aguarde a próxima ordem para testar o envio real do servidor.", "normal"); });
-                this.ui.btnSaveApi.addEventListener('click', () => { this.state.apiConnected = true; this.saveLocalStorage(); this.showToast("Corretora conectada à Nuvem!", "success"); });
-                
-                this.ui.btnAutoTrade.addEventListener('click', () => {
-                    if(!this.state.apiConnected) { this.showToast("Vincule a corretora na aba API primeiro.", "error"); return; }
-                    this.state.isAutoTrade = !this.state.isAutoTrade; this.ui.toggleAutoTrade.classList.toggle('active', this.state.isAutoTrade);
-                });
-                
-                // Restaurando a Dinâmica da Calculadora de Risco (Funcionalidade Perdida)
-                this.ui.inputMao.addEventListener('input', (e) => { 
-                    this.state.baseTradeAmount = parseFloat(e.target.value) || 0; 
-                    this.state.currentTradeAmount = this.state.baseTradeAmount; 
-                    this.updateRiskFeedback();
-                });
-                
-                this.ui.inputGale.addEventListener('change', (e) => this.state.martingaleMaxLevel = parseInt(e.target.value));
-                this.ui.btnManualTrade.addEventListener('click', () => { if (this.state.signalActive) this.executeTrade('Tela'); });
-            }
+            if (vela.timeframe === 60) processarM1(vela);
+            else if (vela.timeframe === 300) processarMTF(vela, historyM5, ui.m5);
+            else if (vela.timeframe === 900) processarMTF(vela, historyM15, ui.m15);
+        });
 
-            updateRiskFeedback() {
-                if (this.state.balance <= 0) return;
-                const perc = ((this.state.baseTradeAmount / this.state.balance) * 100).toFixed(1);
-                this.ui.riskFeedback.innerText = `Risco: ${perc}% da banca atual`;
-                this.ui.riskFeedback.style.color = perc > 5 ? 'var(--red)' : 'var(--text-muted)';
-            }
-
-            updateFinancialUI() {
-                const f = (n) => `R$ ${n.toFixed(2)}`;
-                this.ui.balanceDisplay.innerText = f(this.state.balance);
-                this.ui.profitDisplay.innerText = this.state.dailyProfit >= 0 ? `+ ${f(this.state.dailyProfit)}` : `- ${f(Math.abs(this.state.dailyProfit))}`;
-                this.ui.profitDisplay.style.color = this.state.dailyProfit >= 0 ? 'var(--green)' : 'var(--red)';
-                const total = this.state.totalWins + this.state.totalLosses;
-                if(total > 0) this.ui.winrateDisplay.innerText = `${((this.state.totalWins / total) * 100).toFixed(1)}%`;
-                
-                this.updateRiskFeedback();
-                this.saveLocalStorage();
-            }
-
-            showToast(msg, type = 'normal') {
-                const t = document.createElement('div'); t.className = `toast ${type}`; t.innerText = msg;
-                document.getElementById('toast-container').appendChild(t);
-                setTimeout(() => { t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3000);
-            }
-            playAudio(type) { 
-                if(!this.state.audioEnabled) return;
-                try { 
-                    const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); 
-                    osc.connect(ctx.destination); 
-                    if(type === 'win') osc.frequency.value = 1200; else if(type === 'loss') osc.frequency.value = 200; else osc.frequency.value = 800;
-                    osc.start(); setTimeout(() => { osc.stop(); ctx.close(); }, 300); 
-                } catch(e){} 
-            }
-
-            startMarketLoop() {
-                if(this.state.systemLocked) return;
-                clearTimeout(this.state.marketTimeout);
-                
-                const check = () => {
-                    this.resetSignalUI();
-                    
-                    this.ui.chkNews.className = 'check-wait'; this.ui.chkNews.innerText = 'Lendo...';
-                    this.ui.chkTrend.className = 'check-wait'; this.ui.chkTrend.innerText = 'Lendo...';
-                    this.ui.chkSmc.className = 'check-wait'; this.ui.chkSmc.innerText = 'Lendo...';
-
-                    setTimeout(() => { this.ui.chkNews.className = 'check-ok'; this.ui.chkNews.innerText = 'Seguro'; }, 1500);
-                    setTimeout(() => { this.ui.chkTrend.className = 'check-ok'; this.ui.chkTrend.innerText = 'Alinhada'; }, 2500);
-                    setTimeout(() => { this.ui.chkSmc.className = 'check-ok'; this.ui.chkSmc.innerText = 'Confirmado'; }, 3500);
-
-                    this.state.marketTimeout = setTimeout(() => {
-                        if(this.state.systemLocked) return;
-                        const dir = Math.random() > 0.5 ? 'COMPRA (CALL)' : 'VENDA (PUT)';
-                        this.dispatchSignal(dir, dir.includes('COMPRA') ? '#089981' : '#f23645');
-                    }, 4500);
-                };
-                check(); this.onSignalExpired = check;
-            }
-
-            dispatchSignal(type, color) {
-                this.state.signalActive = true; this.ui.signalBox.style.borderColor = color;
-                this.ui.actionText.innerText = type; this.ui.actionText.style.color = color;
-                this.ui.btnManualTrade.disabled = false; this.ui.btnManualTrade.innerText = `ENTRAR: R$ ${this.state.currentTradeAmount}`; this.ui.btnManualTrade.style.background = color;
-                this.ui.timerContainer.style.display = 'block';
-                
-                if (this.state.isAutoTrade && this.socket) { this.executeTrade('Nuvem'); } 
-                else { this.playAudio('signal'); this.showToast(`NOVO SINAL ${this.state.activeTF}!`, "normal"); }
-
-                const end = Date.now() + this.state.tfConfig[this.state.activeTF].windowMs;
-                clearInterval(this.state.timerInterval);
-                this.state.timerInterval = setInterval(() => {
-                    const rem = end - Date.now();
-                    if (rem <= 0) { clearInterval(this.state.timerInterval); this.handleSignalExpiration(); }
-                    else { this.ui.timerSeconds.innerText = `${(rem/1000).toFixed(1)}s`; this.ui.timerBar.style.width = `${(rem/this.state.tfConfig[this.state.activeTF].windowMs)*100}%`; }
-                }, 50);
-            }
-
-            executeTrade(source) {
-                if (!this.state.signalActive) return;
-                this.state.signalActive = false; this.ui.btnManualTrade.disabled = true; this.ui.btnManualTrade.style.background = 'var(--border)';
-
-                if(source === 'Nuvem' && this.socket) {
-                    this.socket.emit('enviar_ordem', { valor: this.state.currentTradeAmount, direcao: this.ui.actionText.innerText.includes('CALL') ? 'CALL' : 'PUT', ativo: this.ui.assetSelector.options[this.ui.assetSelector.selectedIndex].text });
-                } else {
-                    this.showToast(`Ordem executada. Aguardando resultado...`, "normal");
-                    setTimeout(() => this.processTradeResult(), 3000);
-                }
-            }
-
-            processTradeResult() {
-                const isWin = Math.random() > 0.3; 
-                const amount = this.state.currentTradeAmount;
-                const dir = this.ui.actionText.innerText.includes('CALL') ? 'CALL' : 'PUT';
-                const asset = this.ui.assetSelector.value.split(':')[1];
-
-                if (isWin) {
-                    const lucro = amount * 0.85; this.state.balance += lucro; this.state.dailyProfit += lucro; this.state.totalWins++;
-                    this.state.currentMartingaleStep = 0; this.state.currentTradeAmount = this.state.baseTradeAmount;
-                    this.showToast(`✅ VITÓRIA! Lucro: R$ ${lucro.toFixed(2)}`, "success");
-                    this.playAudio('win');
-                    this.registerHistory(asset, dir, amount, `+ R$ ${lucro.toFixed(2)}`, 'win');
-                } else {
-                    this.state.balance -= amount; this.state.dailyProfit -= amount; this.state.totalLosses++;
-                    if (this.state.currentMartingaleStep < this.state.martingaleMaxLevel) {
-                        this.state.currentMartingaleStep++; this.state.currentTradeAmount = amount * 2;
-                        this.showToast(`❌ DERROTA. Preparando Gale ${this.state.currentMartingaleStep}...`, "warning");
-                    } else {
-                        this.state.currentMartingaleStep = 0; this.state.currentTradeAmount = this.state.baseTradeAmount;
-                        this.showToast(`❌ DERROTA. Fim de Ciclo.`, "error");
-                    }
-                    this.playAudio('loss');
-                    this.registerHistory(asset, dir, amount, `- R$ ${amount.toFixed(2)}`, 'loss');
-                }
-                this.updateFinancialUI();
-            }
-
-            registerHistory(ativo, direcao, valor, res, status) {
-                const horaStr = new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-                const newItem = { horaStr, ativo, direcao, valor, res, status };
-                
-                // Salva no estado
-                this.state.tradeHistory.unshift(newItem); // Coloca no começo do array
-                if (this.state.tradeHistory.length > 50) this.state.tradeHistory.pop(); // Mantém apenas 50
-                
-                this.renderHistoryList();
-                this.saveLocalStorage();
-            }
-
-            renderHistoryList() {
-                if (this.state.tradeHistory.length === 0) return;
-                
-                if (this.ui.emptyHistory) this.ui.emptyHistory.remove();
-                this.ui.historyList.innerHTML = ''; // Limpa antes de renderizar
-                
-                this.state.tradeHistory.forEach(item => {
-                    const html = `<div class="history-item"><span style="color:var(--text-muted)">${item.horaStr}</span><b>${item.ativo}</b><b style="color:${item.direcao==='CALL'?'var(--green)':'var(--red)'}">${item.direcao}</b><span>R$ ${item.valor.toFixed(2)}</span><span class="${item.status==='win'?'badge-win':'badge-loss'}">${item.res}</span></div>`;
-                    this.ui.historyList.insertAdjacentHTML('beforeend', html);
-                });
-            }
-
-            handleSignalExpiration() { this.resetSignalUI(); this.state.marketTimeout = setTimeout(() => { if (this.onSignalExpired && !this.state.systemLocked) this.onSignalExpired(); }, 3000); }
-            resetSignalUI() { this.state.signalActive = false; this.ui.signalBox.style.borderColor = 'var(--border)'; this.ui.actionText.innerText = this.state.systemLocked ? 'MERCADO FECHADO' : 'ANALISANDO...'; this.ui.actionText.style.color = 'var(--text-main)'; this.ui.timerContainer.style.display = 'none'; this.ui.btnManualTrade.disabled = true; this.ui.btnManualTrade.innerText = 'Aguardando...'; this.ui.btnManualTrade.style.background = 'var(--brand)'; }
+        // Processa as M15 e M5 (Apenas para checar a cor da vela atual)
+        function processarMTF(vela, historyArray, uiElement) {
+            const isBull = vela.close > vela.open;
+            uiElement.innerText = isBull ? 'COMPRA' : 'VENDA';
+            uiElement.className = `mtf-val ${isBull ? 'val-bull' : 'val-bear'}`;
         }
-        document.addEventListener("DOMContentLoaded", () => window.App = new TradingApp());
+
+        // Processa o M1 (Motor Principal e Desenho Gráfico)
+        function processarM1(vela) {
+            candleSeries.update(vela);
+            ui.price.innerText = vela.close.toFixed(5);
+            ui.price.style.color = vela.close >= vela.open ? 'var(--green)' : 'var(--red)';
+
+            // Gerencia array M1
+            if (historyM1.length > 0 && historyM1[historyM1.length - 1].time === vela.time) {
+                historyM1[historyM1.length - 1] = { c: vela.close, v: vela.volume };
+            } else {
+                historyM1.push({ c: vela.close, v: vela.volume, time: vela.time });
+                if (historyM1.length > 100) historyM1.shift();
+            }
+
+            const closes = historyM1.map(x => x.c);
+            if (closes.length < 50) return;
+
+            // Cálculos Nativos Avançados
+            const sma50 = calcSMA(closes, 50);
+            const rsi14 = calcRSI(closes, 14);
+            const { upper, lower } = calcBollinger(closes, 20, 2);
+            const avgVol = calcAvgVol(historyM1.map(x => x.v), 10);
+
+            smaSeries.update({ time: vela.time, value: sma50 });
+            bbUpperSeries.update({ time: vela.time, value: upper });
+            bbLowerSeries.update({ time: vela.time, value: lower });
+
+            // Atualiza o painel M1
+            const isBullM1 = vela.close > closes[closes.length-2];
+            ui.m1.innerText = isBullM1 ? 'COMPRA' : 'VENDA';
+            ui.m1.className = `mtf-val ${isBullM1 ? 'val-bull' : 'val-bear'}`;
+
+            analisarSniper(vela.close, vela.volume, avgVol, rsi14, upper, lower);
+        }
+
+        // AS FUNÇÕES DE CÁLCULO
+        function calcSMA(data, p) { return data.slice(-p).reduce((a, b) => a + b) / p; }
+        function calcAvgVol(vols, p) { return vols.slice(-p).reduce((a, b) => a + b) / Math.min(vols.length, p); }
+        
+        function calcBollinger(data, p, std) {
+            const slice = data.slice(-p);
+            const sma = slice.reduce((a,b)=>a+b)/p;
+            const variance = slice.reduce((a,b)=>a + Math.pow(b-sma, 2), 0) / p;
+            const dev = Math.sqrt(variance);
+            return { upper: sma + (dev * std), lower: sma - (dev * std) };
+        }
+
+        function calcRSI(data, p) {
+            let g = 0, l = 0;
+            for (let i = data.length - p - 1; i < data.length - 1; i++) {
+                const diff = data[i+1] - data[i];
+                if (diff >= 0) g += diff; else l -= diff;
+            }
+            if(l===0) return 100;
+            return 100 - (100 / (1 + (g/p) / (l/p)));
+        }
+
+        // MOTOR DE EXECUÇÃO SNIPER
+        function analisarSniper(preco, vol, avgVol, rsi, bbUpper, bbLower) {
+            
+            // 1. Hud Volume
+            const temVolume = vol > (avgVol * 1.2); // Volume 20% acima da média
+            ui.vol.innerText = temVolume ? 'ALTA (Aprovado)' : 'BAIXA (Bloqueado)';
+            ui.vol.className = `hud-value ${temVolume ? 'val-bull' : 'val-bear'}`;
+
+            // 2. Hud RSI
+            ui.rsi.innerText = rsi.toFixed(1);
+            ui.rsi.className = `hud-value ${rsi > 65 ? 'val-bear' : (rsi < 35 ? 'val-bull' : 'val-neutral')}`;
+
+            // 3. Hud Bollinger (Rompimento)
+            const rompeuCima = preco >= bbUpper;
+            const rompeuBaixo = preco <= bbLower;
+            if(rompeuCima) { ui.bb.innerText = 'Rompimento CIMA'; ui.bb.className = 'hud-value val-bear'; }
+            else if(rompeuBaixo) { ui.bb.innerText = 'Rompimento BAIXO'; ui.bb.className = 'hud-value val-bull'; }
+            else { ui.bb.innerText = 'Dentro do Canal'; ui.bb.className = 'hud-value val-neutral'; }
+
+            // 4. Confluência de MTF (O filtro mestre)
+            const m1Text = ui.m1.innerText;
+            const m5Text = ui.m5.innerText;
+            const m15Text = ui.m15.innerText;
+            const mtfComprador = (m1Text === 'COMPRA' && m5Text === 'COMPRA' && m15Text === 'COMPRA');
+            const mtfVendedor = (m1Text === 'VENDA' && m5Text === 'VENDA' && m15Text === 'VENDA');
+
+            // --- LÓGICA DE GATILHO ---
+            // Para COMPRAR (CALL): MTF de Alta + Rompeu Bollinger para BAIXO (Exaustão) + RSI Sobrevendido + Volume forte
+            if (mtfComprador && rompeuBaixo && rsi < 35 && temVolume) {
+                ui.box.style.borderColor = 'var(--green)';
+                ui.text.innerText = 'COMPRA (CALL)';
+                ui.text.style.color = 'var(--green)';
+            }
+            // Para VENDER (PUT): MTF de Baixa + Rompeu Bollinger para CIMA (Exaustão) + RSI Sobrecomprado + Volume forte
+            else if (mtfVendedor && rompeuCima && rsi > 65 && temVolume) {
+                ui.box.style.borderColor = 'var(--red)';
+                ui.text.innerText = 'VENDA (PUT)';
+                ui.text.style.color = 'var(--red)';
+            }
+            else {
+                ui.box.style.borderColor = 'var(--border)';
+                ui.text.innerText = 'FILTRANDO...';
+                ui.text.style.color = 'var(--text-muted)';
+            }
+        }
     </script>
 </body>
 </html>
