@@ -2,14 +2,12 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const WebSocket = require('ws');
-const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
 app.use(express.static('public'));
 
-// Os 10 principais ativos OTC da IQ Option e seus respectivos IDs
 const IQ_ASSETS = {
     'EURUSD-OTC': 76, 'GBPUSD-OTC': 77, 'USDJPY-OTC': 78,
     'EURGBP-OTC': 79, 'USDCHF-OTC': 80, 'AUDUSD-OTC': 81,
@@ -19,15 +17,20 @@ const IQ_ASSETS = {
 
 let iqSocket = null;
 
-// Função mestre de conexão
 function conectarIQOption() {
-    console.log("Conectando ao núcleo de dados da IQ Option...");
-    iqSocket = new WebSocket('wss://iqoption.com/echo/websocket');
+    console.log("Colocando disfarce e conectando à IQ Option...");
+    
+    // O Disfarce (Headers) para a IQ Option não bloquear o servidor na nuvem
+    iqSocket = new WebSocket('wss://iqoption.com/echo/websocket', {
+        headers: {
+            'Origin': 'https://iqoption.com',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+    });
 
     iqSocket.on('open', () => {
-        console.log("✅ Conexão MTF (Multi-Timeframe) estabelecida!");
+        console.log("✅ Conexão MTF estabelecida e disfarçada com sucesso!");
         
-        // Solicita as velas de 1min (60s), 5min (300s) e 15min (900s) para TODOS os ativos
         Object.values(IQ_ASSETS).forEach(activeId => {
             [60, 300, 900].forEach(size => {
                 iqSocket.send(JSON.stringify({
@@ -42,17 +45,12 @@ function conectarIQOption() {
         const mensagem = JSON.parse(data);
         if (mensagem.name === 'candle-generated') {
             const v = mensagem.msg;
-            
-            // Mapeia o ID de volta para o Nome do Ativo (ex: 76 -> EURUSD-OTC)
             let nomeAtivo = Object.keys(IQ_ASSETS).find(key => IQ_ASSETS[key] === v.active_id);
             if(!nomeAtivo) return;
 
             const velaFormatada = {
-                ativo: nomeAtivo,
-                timeframe: v.size, // 60, 300 ou 900
-                time: v.from,
-                open: v.open, high: v.max, low: v.min, close: v.close,
-                volume: v.volume // Tick volume
+                ativo: nomeAtivo, timeframe: v.size, time: v.from,
+                open: v.open, high: v.max, low: v.min, close: v.close, volume: v.volume
             };
 
             io.emit('nova_vela_mtf', velaFormatada);
@@ -66,5 +64,5 @@ function conectarIQOption() {
 }
 conectarIQOption();
 
-io.on('connection', (socket) => { console.log(`🟢 Usuário conectado.`); });
+io.on('connection', (socket) => { console.log(`🟢 Usuário acessou o site.`); });
 server.listen(process.env.PORT || 3000, () => console.log(`🚀 Motor Quântico OTC rodando...`));
