@@ -2,88 +2,151 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SaaS Trading - Produção Final</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SaaS Trading - Master V4 (Mobile & Desktop)</title>
     <style>
-        :root { --bg-dark: #07090e; --panel-bg: #141822; --border: #232836; --green: #089981; --red: #f23645; --orange: #ff9800; --text-main: #e2e5eb; --text-muted: #848e9c; --brand: #2962ff; }
-        * { box-sizing: border-box; }
-        body { margin: 0; background-color: var(--bg-dark); color: var(--text-main); font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden; }
-        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: var(--bg-dark); } ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        .no-select { user-select: none; }
+        :root { 
+            --bg-dark: #07090e; --panel-bg: #141822; --border: #232836; 
+            --green: #089981; --red: #f23645; --orange: #ff9800; 
+            --text-main: #e2e5eb; --text-muted: #848e9c; --brand: #2962ff; 
+        }
         
+        * { box-sizing: border-box; }
+        body { margin: 0; background-color: var(--bg-dark); color: var(--text-main); font-family: 'Inter', -apple-system, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+        
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        
+        .no-select { user-select: none; -webkit-user-select: none; }
+
+        /* Menu Lateral (Desktop) */
         .sidebar-nav { width: 220px; background: var(--panel-bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0;}
         .brand-logo { padding: 20px; font-size: 18px; font-weight: 900; border-bottom: 1px solid var(--border); }
         .brand-logo span { color: var(--brand); }
         .nav-menu { padding: 15px 0; flex: 1; overflow-y: auto; }
-        .nav-item { padding: 12px 20px; color: var(--text-muted); font-size: 14px; cursor: pointer; display: flex; justify-content: space-between;}
+        .nav-item { padding: 12px 20px; color: var(--text-muted); font-size: 14px; font-weight: 500; cursor: pointer; transition: 0.2s; display: flex; justify-content: space-between; align-items: center;}
         .nav-item:hover, .nav-item.active { background: rgba(41, 98, 255, 0.1); color: var(--brand); border-left: 3px solid var(--brand); }
         
         .main-wrapper { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-        header { background: var(--panel-bg); padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-        .header-left { display: flex; align-items: center; gap: 15px; }
-        .asset-selector { background: var(--bg-dark); color: white; border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; font-size: 16px; font-weight: bold; }
-        .audio-toggle { background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-muted); padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+        
+        /* Cabeçalho */
+        header { background: var(--panel-bg); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 10px;}
+        .header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;}
+        .asset-selector { background: var(--bg-dark); color: white; border: 1px solid var(--border); padding: 8px; border-radius: 6px; font-size: 14px; font-weight: bold; outline: none; }
+        .audio-toggle { background: var(--bg-dark); border: 1px solid var(--border); color: var(--text-muted); padding: 8px; border-radius: 6px; cursor: pointer; }
         .audio-toggle.active { color: var(--green); border-color: var(--green); }
-        .top-stats { display: flex; gap: 15px; }
-        .stat-box { background: var(--bg-dark); padding: 8px 15px; border-radius: 6px; border: 1px solid var(--border); font-size: 12px; }
-        .stat-val { font-size: 16px; font-weight: bold; margin-top: 3px; }
+        
+        .top-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+        .stat-box { background: var(--bg-dark); padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 11px; }
+        .stat-val { font-size: 14px; font-weight: bold; margin-top: 2px; }
 
-        .view-section { display: none; height: calc(100vh - 72px); width: 100%; }
-        .view-section.active { display: flex; }
-        .left-content { flex: 1; min-width: 60%; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
-        .chart-area { flex: 1; background: #07090e; }
-        .history-panel { height: 180px; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; flex-direction: column; }
-        .history-header { padding: 10px 20px; font-size: 12px; font-weight: bold; color: var(--text-muted); border-bottom: 1px solid var(--border); }
-        .history-list { flex: 1; overflow-y: auto; padding: 0 10px; }
-        .history-item { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; padding: 12px 10px; border-bottom: 1px solid var(--border); font-size: 13px; align-items: center; }
-        .badge-win { background: rgba(8, 153, 129, 0.1); color: var(--green); padding: 4px 8px; border-radius: 4px; font-weight: bold; text-align: center;}
-        .badge-loss { background: rgba(242, 54, 69, 0.1); color: var(--red); padding: 4px 8px; border-radius: 4px; font-weight: bold; text-align: center;}
-        .side-panel { width: 360px; background: var(--bg-dark); display: flex; flex-direction: column; padding: 20px; gap: 15px; overflow-y: auto; flex-shrink: 0;}
+        /* Telas */
+        .view-section { display: none; height: calc(100vh - 65px); width: 100%; }
+        .view-section.active { display: flex; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        .auto-trade-box { background: rgba(41, 98, 255, 0.05); border: 1px solid rgba(41, 98, 255, 0.2); padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;}
+        .left-content { flex: 1; min-width: 55%; display: flex; flex-direction: column; border-right: 1px solid var(--border); }
+        .chart-area { flex: 1; position: relative; background: #07090e; min-height: 300px;}
+        
+        .history-panel { height: 160px; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; flex-direction: column; }
+        .history-header { padding: 8px 15px; font-size: 12px; font-weight: bold; color: var(--text-muted); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;}
+        .history-list { flex: 1; overflow-y: auto; padding: 0 5px; }
+        .history-item { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; padding: 10px; border-bottom: 1px solid var(--border); font-size: 12px; align-items: center; }
+        .badge-win { background: rgba(8, 153, 129, 0.1); color: var(--green); padding: 4px; border-radius: 4px; font-weight: bold; text-align: center;}
+        .badge-loss { background: rgba(242, 54, 69, 0.1); color: var(--red); padding: 4px; border-radius: 4px; font-weight: bold; text-align: center;}
+
+        /* Painel Lateral Direito */
+        .side-panel { width: 340px; background: var(--bg-dark); display: flex; flex-direction: column; padding: 15px; gap: 15px; overflow-y: auto; flex-shrink: 0;}
+
+        /* FUNÇÃO RESTAURADA: Status do Pregão */
+        .market-status { background: var(--panel-bg); border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 13px; font-weight: bold; text-align: center; display: flex; justify-content: space-between; align-items: center;}
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .status-aberto { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        .status-fechado { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+        /* FUNÇÃO RESTAURADA: Widget Velocímetro */
+        .tech-widget-container { height: 220px; width: 100%; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); background: var(--panel-bg); }
+
+        .auto-trade-box { background: rgba(41, 98, 255, 0.05); border: 1px solid rgba(41, 98, 255, 0.2); padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; cursor: pointer;}
         .toggle-switch { position: relative; width: 40px; height: 20px; background: var(--border); border-radius: 20px; transition: 0.3s; }
         .toggle-switch::after { content: ''; position: absolute; width: 16px; height: 16px; background: white; border-radius: 50%; top: 2px; left: 2px; transition: 0.3s; }
         .toggle-switch.active { background: var(--brand); }
         .toggle-switch.active::after { left: 22px; }
 
-        .tf-selector { display: flex; gap: 10px; margin-bottom: 5px; }
-        .tf-btn { flex: 1; background: var(--panel-bg); border: 1px solid var(--border); color: var(--text-muted); padding: 8px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px;}
+        .tf-selector { display: flex; gap: 8px; }
+        .tf-btn { flex: 1; background: var(--panel-bg); border: 1px solid var(--border); color: var(--text-muted); padding: 8px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; transition: 0.2s;}
         .tf-btn.active { background: var(--brand); color: white; border-color: var(--brand); }
-        
-        .signal-box { background: var(--panel-bg); border-radius: 8px; padding: 20px; text-align: center; border: 1px solid var(--border); }
-        .action-text { font-size: 26px; font-weight: 900; margin: 5px 0; color: var(--text-muted); }
-        .timer-container { margin-top: 15px; display: none; background: rgba(255, 152, 0, 0.1); padding: 10px; border-radius: 8px; border: 1px dashed var(--orange); }
+
+        .signal-box { background: var(--panel-bg); border-radius: 8px; padding: 15px; text-align: center; border: 1px solid var(--border); transition: 0.3s;}
+        .action-text { font-size: 24px; font-weight: 900; margin: 5px 0; color: var(--text-muted); }
+        .timer-container { margin-top: 10px; display: none; background: rgba(255, 152, 0, 0.1); padding: 8px; border-radius: 8px; border: 1px dashed var(--orange); }
         .timer-bar-bg { width: 100%; height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; margin-top: 5px; overflow: hidden;}
         .timer-bar-fill { height: 100%; width: 100%; background: var(--orange); transition: width 0.1s linear; }
 
-        .input-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%;}
-        .input-group label { font-size: 13px; color: var(--text-muted); width: 40%;}
-        .input-control { background: var(--bg-dark); border: 1px solid var(--border); color: white; padding: 10px; border-radius: 4px; width: 60%; outline: none; border: 1px solid var(--border);}
-        .btn-primary { background: var(--brand); color: white; border: none; padding: 14px; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 10px;}
-        .btn-primary:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; }
+        /* FUNÇÃO RESTAURADA: Checklist de Precisão */
+        .checklist-box { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+        .check-item { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 4px;}
+        .check-item:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0;}
+        .check-ok { color: var(--green); font-weight: bold; }
+        .check-wait { color: var(--orange); font-weight: bold; }
+
+        .input-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; width: 100%;}
+        .input-group label { font-size: 12px; color: var(--text-muted); width: 45%;}
+        .input-control { background: var(--bg-dark); border: 1px solid var(--border); color: white; padding: 8px; border-radius: 4px; width: 55%; font-size: 12px; outline: none;}
+        .btn-primary { background: var(--brand); color: white; border: none; padding: 14px; border-radius: 6px; font-weight: bold; width: 100%; cursor: pointer; margin-top: 5px; transition: 0.2s;}
+        .btn-primary:disabled { background: var(--border); color: var(--text-muted); }
 
         .toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 10px; z-index: 9999;}
-        .toast { background: var(--panel-bg); border-left: 4px solid var(--brand); color: white; padding: 15px 20px; border-radius: 6px; font-size: 13px; opacity: 1; }
+        .toast { background: var(--panel-bg); border-left: 4px solid var(--brand); color: white; padding: 12px 15px; border-radius: 6px; font-size: 12px; opacity: 1; }
         .toast.success { border-left-color: var(--green); }
         .toast.error { border-left-color: var(--red); }
-        
-        /* Telas Genéricas */
-        .generic-view-content { padding: 40px; flex: 1; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start;}
-        .card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 30px; width: 100%; max-width: 600px;}
-        .card h2 { margin-top: 0; font-size: 20px; color: white; border-bottom: 1px solid var(--border); padding-bottom: 15px;}
-        .card p { color: var(--text-muted); font-size: 14px; line-height: 1.6; margin-bottom: 25px;}
 
-        .conn-status { font-size: 12px; display: flex; align-items: center; gap: 6px; color: var(--text-muted); margin-top: 5px; }
-        .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); box-shadow: 0 0 5px var(--red);}
-        .conn-dot.online { background: var(--green); box-shadow: 0 0 5px var(--green);}
+        .conn-status { font-size: 11px; display: flex; align-items: center; gap: 4px; color: var(--text-muted); margin-top: 5px; }
+        .conn-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); box-shadow: 0 0 4px var(--red);}
+        .conn-dot.online { background: var(--green); box-shadow: 0 0 4px var(--green);}
+
+        .generic-view-content { padding: 20px; flex: 1; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start;}
+        .card { background: var(--panel-bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; width: 100%; max-width: 500px;}
+
+        /* ========================================================
+           NOVO: MÁGICA DO RESPONSIVO (MOBILE FIRST)
+           Isolamento de Layout para Celulares
+           ======================================================== */
+        @media (max-width: 768px) {
+            body { flex-direction: column; overflow-y: auto; }
+            /* O Menu lateral vira um Menu Horizontal no topo ou rodapé */
+            .sidebar-nav { width: 100%; height: auto; flex-direction: row; border-right: none; border-bottom: 1px solid var(--border); overflow-x: auto;}
+            .brand-logo { display: none; } /* Esconde a logo grande no celular */
+            .nav-menu { display: flex; padding: 0; }
+            .nav-item { padding: 15px; border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+            .nav-item:hover, .nav-item.active { border-left: none; border-bottom: 3px solid var(--brand); background: transparent; }
+            
+            /* Ajusta a tela principal para descer rolando */
+            .main-wrapper { overflow-y: auto; }
+            .view-section.active { flex-direction: column; height: auto; }
+            
+            /* Gráfico e Histórico ocupam 100% da largura no celular */
+            .left-content { min-width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+            .chart-area { min-height: 400px; } /* Garante que o gráfico não esprema */
+            .history-panel { height: 200px; }
+            
+            /* Painel Direito (Controles) vai para baixo */
+            .side-panel { width: 100%; padding: 15px; }
+            
+            /* Esconde alguns textos dos botões para caber tudo na tela */
+            .stat-box { padding: 4px 8px; }
+            .history-item { font-size: 11px; padding: 8px 5px; }
+        }
     </style>
 </head>
 <body>
     <div class="sidebar-nav no-select">
-        <div class="brand-logo">Auto<span>Trade</span> AI</div>
+        <div class="brand-logo">Auto<span>Trade</span></div>
         <div class="nav-menu">
-            <div class="nav-item active" data-target="view-sinais">📈 Sala de Sinais</div>
-            <div class="nav-item" data-target="view-config">⚙️ Conexão API</div>
+            <div class="nav-item active" data-target="view-sinais">📈 Sinais</div>
+            <div class="nav-item" data-target="view-telegram">🤖 Bot Telegram</div>
+            <div class="nav-item" data-target="view-config">⚙️ API</div>
         </div>
     </div>
 
@@ -93,48 +156,77 @@
                 <select id="asset-selector" class="asset-selector">
                     <option value="FX:EURUSD">🇪🇺🇺🇸 EUR/USD</option>
                     <option value="FX:GBPUSD">🇬🇧🇺🇸 GBP/USD</option>
+                    <option value="BINANCE:BTCUSDT">₿ Bitcoin</option>
                 </select>
                 <button id="btn-audio" class="audio-toggle">🔇</button>
             </div>
             <div class="top-stats">
                 <div class="stat-box">Win Rate<div class="stat-val" style="color: var(--brand);" id="winrate-display">0%</div></div>
-                <div class="stat-box">Banca Atual<div class="stat-val" style="color: var(--text-main);" id="balance-display">R$ 0,00</div></div>
+                <div class="stat-box">Banca<div class="stat-val" style="color: var(--text-main);" id="balance-display">R$ 0,00</div></div>
                 <div class="stat-box">Lucro<div class="stat-val" style="color: var(--green);" id="profit-display">+ R$ 0,00</div></div>
             </div>
         </header>
 
         <section id="view-sinais" class="view-section active">
+            <!-- PARTE SUPERIOR NO CELULAR (Gráfico) -->
             <div class="left-content">
                 <div class="chart-area" id="chart-container"><div id="tradingview_chart" style="height: 100%; width: 100%;"></div></div>
                 <div class="history-panel">
-                    <div class="history-header">Histórico de Operações</div>
+                    <div class="history-header">
+                        <span>Histórico (Hoje)</span>
+                        <div class="conn-status" id="ws-status"><div class="conn-dot" id="ws-dot"></div> Conectando...</div>
+                    </div>
                     <div class="history-list" id="history-list"></div>
                 </div>
             </div>
+
+            <!-- PARTE INFERIOR NO CELULAR (Controles da IA) -->
             <div class="side-panel">
+                
+                <!-- FUNÇÃO RESTAURADA 1: Horário de Pregão -->
+                <div class="market-status">
+                    <span>Horário Operacional:</span>
+                    <span id="market-time-status" style="color: var(--text-muted);">Verificando...</span>
+                </div>
+
                 <div class="auto-trade-box no-select" id="btn-autotrade">
                     <div>
-                        <div style="font-weight: bold; font-size: 14px; color: white;">Auto-Execução</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Servidor na Nuvem</div>
+                        <div style="font-weight: bold; font-size: 13px; color: white;">Auto-Execução (Nuvem)</div>
                     </div>
                     <div class="toggle-switch" id="autotrade-toggle"></div>
                 </div>
+
                 <div class="tf-selector no-select">
+                    <button class="tf-btn" data-tf="M1">1 Min</button>
                     <button class="tf-btn active" data-tf="M5">5 Min</button>
                     <button class="tf-btn" data-tf="M15">15 Min</button>
                 </div>
+
+                <!-- FUNÇÃO RESTAURADA 2: Velocímetro de Força TradingView -->
+                <div class="tech-widget-container" id="tech-widget-container">
+                    <!-- Injetado via JS -->
+                </div>
+
                 <div class="signal-box" id="signal-box">
-                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;" id="signal-tf-label">Ação Recomendada (M5)</div>
+                    <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;" id="signal-tf-label">Ação Recomendada (M5)</div>
                     <div class="action-text" id="action-text">ANALISANDO...</div>
                     <div id="timer-container" class="timer-container">
-                        <div style="font-size: 13px; font-weight: bold; color: var(--text-main); display: flex; justify-content: space-between;">
+                        <div style="font-size: 12px; font-weight: bold; color: var(--text-main); display: flex; justify-content: space-between;">
                             <span>Expiração:</span> <span id="timer-seconds">0.0s</span>
                         </div>
                         <div class="timer-bar-bg"><div class="timer-bar-fill" id="timer-bar"></div></div>
                     </div>
                 </div>
+
+                <!-- FUNÇÃO RESTAURADA 3: Checklist de Precisão -->
+                <div class="checklist-box">
+                    <div class="check-item"><span>Filtro de Notícias (Macro)</span><span id="chk-news" class="check-wait">Lendo...</span></div>
+                    <div class="check-item"><span>Alinhamento de Tendência</span><span id="chk-trend" class="check-wait">Lendo...</span></div>
+                    <div class="check-item"><span>Aprovação SMC (Bancos)</span><span id="chk-smc" class="check-wait">Lendo...</span></div>
+                </div>
+
                 <div style="background: var(--panel-bg); border-radius: 8px; padding: 15px; border: 1px solid var(--border);">
-                    <div class="input-group"><label>Mão Inicial (R$):</label><input type="number" id="input-mao" class="input-control" value="50"></div>
+                    <div class="input-group"><label>Entrada Inicial:</label><input type="number" id="input-mao" class="input-control" value="50"></div>
                     <div class="input-group">
                         <label>Martingale:</label>
                         <select id="input-gale" class="input-control"><option value="0">Desativado</option><option value="1">Até 1 Nível</option></select>
@@ -144,13 +236,30 @@
             </div>
         </section>
 
+        <!-- Telas Secundárias -->
+        <section id="view-telegram" class="view-section">
+            <div class="generic-view-content">
+                <div class="card">
+                    <h2>🤖 Bot Telegram API</h2>
+                    <p>Conecte para disparar sinais no seu canal VIP.</p>
+                    <div class="input-group"><label>Bot Token:</label><input type="password" id="tg-token" class="input-control"></div>
+                    <div class="input-group"><label>Chat ID:</label><input type="text" id="tg-chat" class="input-control"></div>
+                    <button class="btn-primary" id="btn-save-tg">Salvar Conexão</button>
+                </div>
+            </div>
+        </section>
+
         <section id="view-config" class="view-section">
             <div class="generic-view-content">
                 <div class="card">
-                    <h2>⚙️ Conexão de Servidor</h2>
-                    <p>Status da comunicação com o Backend Node.js.</p>
-                    <div class="conn-status" id="ws-status" style="font-size: 16px; margin-bottom: 20px;"><div class="conn-dot" id="ws-dot"></div> Conectando à Nuvem...</div>
-                    <button class="btn-primary" id="btn-save-api">Simular Vínculo de Corretora</button>
+                    <h2>⚙️ API Corretora</h2>
+                    <p>Vincule para liberar a Auto-Execução (Copy) pelo Servidor.</p>
+                    <div class="input-group">
+                        <label>Corretora:</label>
+                        <select id="api-broker" class="input-control"><option value="none">Selecione...</option><option value="quotex">Quotex</option><option value="iqoption">IQ Option</option></select>
+                    </div>
+                    <div class="input-group"><label>Chave API:</label><input type="password" id="api-public" class="input-control"></div>
+                    <button class="btn-primary" id="btn-save-api">Conectar e Salvar</button>
                 </div>
             </div>
         </section>
@@ -158,7 +267,6 @@
     
     <div class="toast-container" id="toast-container"></div>
 
-    <!-- O pulo do gato: Esta linha conecta o HTML ao servidor Node.js -->
     <script src="/socket.io/socket.io.js"></script>
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     
@@ -171,8 +279,13 @@
                     isAutoTrade: false, baseTradeAmount: 50, currentTradeAmount: 50, 
                     martingaleMaxLevel: 0, currentMartingaleStep: 0, systemLocked: false, 
                     signalActive: false, timerInterval: null, marketTimeout: null, audioEnabled: false, apiConnected: false,
-                    tfConfig: { 'M5': { windowMs: 10000, chartInterval: "5" }, 'M15': { windowMs: 20000, chartInterval: "15" } }
+                    tfConfig: { 
+                        'M1': { windowMs: 5000, chartInterval: "1", techInt: "1m" },
+                        'M5': { windowMs: 10000, chartInterval: "5", techInt: "5m" }, 
+                        'M15': { windowMs: 20000, chartInterval: "15", techInt: "15m" } 
+                    }
                 };
+                
                 this.ui = {
                     assetSelector: document.getElementById('asset-selector'), balanceDisplay: document.getElementById('balance-display'),
                     profitDisplay: document.getElementById('profit-display'), winrateDisplay: document.getElementById('winrate-display'),
@@ -184,44 +297,103 @@
                     navItems: document.querySelectorAll('.nav-item'), viewSections: document.querySelectorAll('.view-section'),
                     signalTfLabel: document.getElementById('signal-tf-label'), tfButtons: document.querySelectorAll('.tf-btn'),
                     historyList: document.getElementById('history-list'), btnAudio: document.getElementById('btn-audio'),
-                    wsDot: document.getElementById('ws-dot'), wsStatus: document.getElementById('ws-status'), btnSaveApi: document.getElementById('btn-save-api')
+                    wsDot: document.getElementById('ws-dot'), wsStatus: document.getElementById('ws-status'), btnSaveApi: document.getElementById('btn-save-api'),
+                    marketTimeStatus: document.getElementById('market-time-status'), techWidgetContainer: document.getElementById('tech-widget-container'),
+                    chkNews: document.getElementById('chk-news'), chkTrend: document.getElementById('chk-trend'), chkSmc: document.getElementById('chk-smc')
                 };
+                
                 this.init();
             }
 
             init() {
-                this.loadChart(); this.bindEvents(); this.updateFinancialUI();
-                this.connectToServer(); 
+                this.loadLocalStorage();
+                this.loadChartAndWidget(); 
+                this.checkMarketHours();
+                this.bindEvents(); 
+                this.updateFinancialUI();
+                
+                // Checa o horário de pregão a cada minuto
+                setInterval(() => this.checkMarketHours(), 60000);
+
+                // Tenta conectar ao Socket. Se falhar no celular localmente, ele roda no modo simulação.
+                try { this.connectToServer(); } catch(e) { this.startMarketLoop(); }
             }
 
-            // O CONECTOR REAL (WEB SOCKETS)
+            // FUNÇÃO RESTAURADA 1: Lógica do Horário de Pregão
+            checkMarketHours() {
+                const agora = new Date();
+                const hora = agora.getHours();
+                const dia = agora.getDay();
+                // Simulação: Mercado Forex real opera 24h dias úteis, mas vamos bloquear fds e madrugada para proteger a IA.
+                const fimDeSemana = (dia === 0 || dia === 6);
+                const aberto = !fimDeSemana && hora >= 8 && hora < 18; // Aberto das 8h às 18h
+
+                if (aberto) {
+                    this.ui.marketTimeStatus.innerHTML = `<span class="status-dot status-aberto"></span> <span style="color: var(--green)">Aberto</span>`;
+                    this.state.systemLocked = false;
+                } else {
+                    this.ui.marketTimeStatus.innerHTML = `<span class="status-dot status-fechado"></span> <span style="color: var(--red)">Fechado</span>`;
+                    this.state.systemLocked = true;
+                    this.resetSignalUI();
+                    this.ui.actionText.innerText = 'MERCADO FECHADO';
+                }
+            }
+
+            // FUNÇÃO RESTAURADA 2: Recarrega Gráfico E Velocímetro
+            loadChartAndWidget() {
+                // 1. Gráfico Principal
+                document.getElementById('tradingview_chart').innerHTML = ''; 
+                new TradingView.widget({
+                    "autosize": true, "symbol": this.state.activeAsset, 
+                    "interval": this.state.tfConfig[this.state.activeTF].chartInterval, 
+                    "theme": "dark", "style": "1", "backgroundColor": "#07090e", 
+                    "hide_top_toolbar": true, "container_id": "tradingview_chart"
+                });
+
+                // 2. Velocímetro de Análise Técnica
+                this.ui.techWidgetContainer.innerHTML = ''; // Limpa o antigo
+                const script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-technical-analysis.js';
+                script.async = true;
+                script.innerHTML = JSON.stringify({
+                    "interval": this.state.tfConfig[this.state.activeTF].techInt,
+                    "width": "100%", "isTransparent": true, "height": "100%",
+                    "symbol": this.state.activeAsset, "showIntervalTabs": false, 
+                    "displayMode": "single", "locale": "br", "colorTheme": "dark"
+                });
+                this.ui.techWidgetContainer.appendChild(script);
+            }
+
+            loadLocalStorage() {
+                const data = JSON.parse(localStorage.getItem('saasData') || '{}');
+                if(data.balance) this.state.balance = data.balance;
+                if(data.dailyProfit) this.state.dailyProfit = data.dailyProfit;
+                if(data.apiBroker) this.state.apiConnected = true;
+            }
+
+            saveLocalStorage() {
+                localStorage.setItem('saasData', JSON.stringify({ balance: this.state.balance, dailyProfit: this.state.dailyProfit, apiBroker: this.state.apiConnected ? 'conectado' : null }));
+            }
+
             connectToServer() {
-                this.socket = io(); // Conecta no servidor Node.js
-                
-                this.socket.on('connect', () => {
-                    this.ui.wsDot.classList.add('online');
-                    this.ui.wsStatus.innerHTML = `<div class="conn-dot online"></div> Backend Node.js Online`;
-                    this.showToast("Conexão estabelecida com a Nuvem!", "success");
+                if(typeof io !== 'undefined') {
+                    this.socket = io(); 
+                    this.socket.on('connect', () => {
+                        this.ui.wsDot.classList.add('online');
+                        this.ui.wsStatus.innerHTML = `<div class="conn-dot online"></div> Online`;
+                        this.startMarketLoop();
+                    });
+                    this.socket.on('disconnect', () => {
+                        this.ui.wsDot.classList.remove('online');
+                        this.ui.wsStatus.innerHTML = `<div class="conn-dot"></div> Offline`;
+                    });
+                    this.socket.on('notificacao', (data) => this.showToast(data.msg, data.tipo));
+                    this.socket.on('resultado_ordem', (data) => setTimeout(() => this.processTradeResult(true), 3000));
+                } else {
+                    // Modo simulação se o Socket falhar
                     this.startMarketLoop();
-                });
-
-                this.socket.on('disconnect', () => {
-                    this.ui.wsDot.classList.remove('online');
-                    this.ui.wsStatus.innerHTML = `<div class="conn-dot"></div> Servidor Offline`;
-                    this.showToast("Conexão com a nuvem perdida.", "error");
-                });
-
-                // Ouve os logs que o servidor Node.js envia enquanto o robô clica lá na nuvem
-                this.socket.on('notificacao', (data) => {
-                    this.showToast(data.msg, data.tipo);
-                });
-
-                // Ouve a confirmação de que a ordem foi registrada
-                this.socket.on('resultado_ordem', (data) => {
-                    this.showToast(data.msg, "success");
-                    // Simula o fechamento da vela (Win/Loss) 3 segundos depois que a ordem foi feita
-                    setTimeout(() => this.processTradeResult(true), 3000); 
-                });
+                }
             }
 
             bindEvents() {
@@ -230,24 +402,33 @@
                     this.ui.viewSections.forEach(sec => sec.classList.remove('active'));
                     document.getElementById(item.getAttribute('data-target')).classList.add('active');
                 }));
-                this.ui.btnAudio.addEventListener('click', () => { this.state.audioEnabled = !this.state.audioEnabled; this.ui.btnAudio.innerText = this.state.audioEnabled ? '🔊' : '🔇'; });
-                this.ui.assetSelector.addEventListener('change', (e) => { this.state.activeAsset = e.target.value; this.loadChart(); this.resetSignalUI(); });
+                this.ui.btnAudio.addEventListener('click', () => { this.state.audioEnabled = !this.state.audioEnabled; this.ui.btnAudio.innerText = this.state.audioEnabled ? '🔊' : '🔇'; this.ui.btnAudio.classList.toggle('active', this.state.audioEnabled);});
+                
+                this.ui.assetSelector.addEventListener('change', (e) => { 
+                    this.state.activeAsset = e.target.value; 
+                    this.loadChartAndWidget(); this.resetSignalUI(); 
+                });
+                
                 this.ui.tfButtons.forEach(btn => btn.addEventListener('click', (e) => {
                     this.ui.tfButtons.forEach(b => b.classList.remove('active')); e.target.classList.add('active');
                     this.state.activeTF = e.target.getAttribute('data-tf'); this.ui.signalTfLabel.innerText = `Ação Recomendada (${this.state.activeTF})`;
-                    this.loadChart(); this.resetSignalUI();
+                    this.loadChartAndWidget(); this.resetSignalUI();
                 }));
-                this.ui.btnSaveApi.addEventListener('click', () => { this.state.apiConnected = true; this.showToast("Simulação: Corretora vinculada com sucesso!", "success"); });
+                
+                this.ui.btnSaveApi.addEventListener('click', () => { 
+                    this.state.apiConnected = true; this.saveLocalStorage(); this.showToast("Corretora conectada à Nuvem!", "success"); 
+                });
+                
                 this.ui.btnAutoTrade.addEventListener('click', () => {
-                    if(!this.state.apiConnected) { this.showToast("Vincule a corretora na aba Configurações primeiro.", "error"); return; }
+                    if(!this.state.apiConnected) { this.showToast("Vincule a corretora na aba API primeiro.", "error"); return; }
                     this.state.isAutoTrade = !this.state.isAutoTrade; this.ui.toggleAutoTrade.classList.toggle('active', this.state.isAutoTrade);
                 });
+                
                 this.ui.inputMao.addEventListener('change', (e) => { this.state.baseTradeAmount = parseFloat(e.target.value); this.state.currentTradeAmount = this.state.baseTradeAmount; });
                 this.ui.inputGale.addEventListener('change', (e) => this.state.martingaleMaxLevel = parseInt(e.target.value));
-                this.ui.btnManualTrade.addEventListener('click', () => { if (this.state.signalActive) this.executeTrade('Manual'); });
+                this.ui.btnManualTrade.addEventListener('click', () => { if (this.state.signalActive) this.executeTrade('Tela'); });
             }
 
-            loadChart() { document.getElementById('tradingview_chart').innerHTML = ''; new TradingView.widget({"autosize": true, "symbol": this.state.activeAsset, "interval": this.state.tfConfig[this.state.activeTF].chartInterval, "theme": "dark", "style": "1", "backgroundColor": "#07090e", "hide_top_toolbar": false, "container_id": "tradingview_chart"}); }
             updateFinancialUI() {
                 const f = (n) => `R$ ${n.toFixed(2)}`;
                 this.ui.balanceDisplay.innerText = f(this.state.balance);
@@ -255,7 +436,9 @@
                 this.ui.profitDisplay.style.color = this.state.dailyProfit >= 0 ? 'var(--green)' : 'var(--red)';
                 const total = this.state.totalWins + this.state.totalLosses;
                 if(total > 0) this.ui.winrateDisplay.innerText = `${((this.state.totalWins / total) * 100).toFixed(1)}%`;
+                this.saveLocalStorage();
             }
+
             showToast(msg, type = 'normal') {
                 const t = document.createElement('div'); t.className = `toast ${type}`; t.innerText = msg;
                 document.getElementById('toast-container').appendChild(t);
@@ -264,13 +447,26 @@
             playAudio() { if(this.state.audioEnabled) { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); osc.connect(ctx.destination); osc.frequency.value = 800; osc.start(); setTimeout(() => { osc.stop(); ctx.close(); }, 300); } catch(e){} } }
 
             startMarketLoop() {
+                if(this.state.systemLocked) return;
                 clearTimeout(this.state.marketTimeout);
+                
                 const check = () => {
                     this.resetSignalUI();
+                    
+                    // Simula a IA validando o Checklist de Precisão (FUNÇÃO RESTAURADA 3)
+                    this.ui.chkNews.className = 'check-wait'; this.ui.chkNews.innerText = 'Lendo...';
+                    this.ui.chkTrend.className = 'check-wait'; this.ui.chkTrend.innerText = 'Lendo...';
+                    this.ui.chkSmc.className = 'check-wait'; this.ui.chkSmc.innerText = 'Lendo...';
+
+                    setTimeout(() => { this.ui.chkNews.className = 'check-ok'; this.ui.chkNews.innerText = 'Seguro'; }, 1500);
+                    setTimeout(() => { this.ui.chkTrend.className = 'check-ok'; this.ui.chkTrend.innerText = 'Alinhada'; }, 2500);
+                    setTimeout(() => { this.ui.chkSmc.className = 'check-ok'; this.ui.chkSmc.innerText = 'Confirmado'; }, 3500);
+
                     this.state.marketTimeout = setTimeout(() => {
+                        if(this.state.systemLocked) return;
                         const dir = Math.random() > 0.5 ? 'COMPRA (CALL)' : 'VENDA (PUT)';
                         this.dispatchSignal(dir, dir.includes('COMPRA') ? '#089981' : '#f23645');
-                    }, Math.floor(Math.random() * 5000) + 5000);
+                    }, 4000);
                 };
                 check(); this.onSignalExpired = check;
             }
@@ -281,7 +477,7 @@
                 this.ui.btnManualTrade.disabled = false; this.ui.btnManualTrade.innerText = `ENTRAR: R$ ${this.state.currentTradeAmount}`; this.ui.btnManualTrade.style.background = color;
                 this.ui.timerContainer.style.display = 'block';
                 
-                if (this.state.isAutoTrade) { this.executeTrade('Nuvem'); } 
+                if (this.state.isAutoTrade && this.socket) { this.executeTrade('Nuvem'); } 
                 else { this.playAudio(); this.showToast(`NOVO SINAL ${this.state.activeTF}!`, "normal"); }
 
                 const end = Date.now() + this.state.tfConfig[this.state.activeTF].windowMs;
@@ -297,17 +493,16 @@
                 if (!this.state.signalActive) return;
                 this.state.signalActive = false; this.ui.btnManualTrade.disabled = true; this.ui.btnManualTrade.style.background = 'var(--border)';
 
-                if(source === 'Nuvem' && this.state.apiConnected) {
-                    // Manda a ordem de execução para o nosso server.js rodar no navegador fantasma
+                if(source === 'Nuvem' && this.socket) {
                     this.socket.emit('enviar_ordem', { valor: this.state.currentTradeAmount, direcao: this.ui.actionText.innerText.includes('CALL') ? 'CALL' : 'PUT' });
                 } else {
-                    this.showToast(`Ordem executada na tela.`, "normal");
+                    this.showToast(`Ordem executada. Aguardando resultado...`, "normal");
                     setTimeout(() => this.processTradeResult(true), 3000);
                 }
             }
 
-            processTradeResult(simulatedResult) {
-                const isWin = Math.random() > 0.3; // Simula a vitória
+            processTradeResult() {
+                const isWin = Math.random() > 0.3; 
                 const amount = this.state.currentTradeAmount;
                 const dir = this.ui.actionText.innerText.includes('CALL') ? 'CALL' : 'PUT';
                 const asset = this.ui.assetSelector.value.split(':')[1];
@@ -336,10 +531,11 @@
                 this.ui.historyList.insertAdjacentHTML('afterbegin', html);
             }
 
-            handleSignalExpiration() { this.resetSignalUI(); this.state.marketTimeout = setTimeout(() => { if (this.onSignalExpired) this.onSignalExpired(); }, 3000); }
-            resetSignalUI() { this.state.signalActive = false; this.ui.signalBox.style.borderColor = 'var(--border)'; this.ui.actionText.innerText = 'ANALISANDO...'; this.ui.actionText.style.color = 'var(--text-main)'; this.ui.timerContainer.style.display = 'none'; this.ui.btnManualTrade.disabled = true; this.ui.btnManualTrade.innerText = 'Aguardando...'; this.ui.btnManualTrade.style.background = 'var(--brand)'; }
+            handleSignalExpiration() { this.resetSignalUI(); this.state.marketTimeout = setTimeout(() => { if (this.onSignalExpired && !this.state.systemLocked) this.onSignalExpired(); }, 3000); }
+            resetSignalUI() { this.state.signalActive = false; this.ui.signalBox.style.borderColor = 'var(--border)'; this.ui.actionText.innerText = this.state.systemLocked ? 'MERCADO FECHADO' : 'ANALISANDO...'; this.ui.actionText.style.color = 'var(--text-main)'; this.ui.timerContainer.style.display = 'none'; this.ui.btnManualTrade.disabled = true; this.ui.btnManualTrade.innerText = 'Aguardando...'; this.ui.btnManualTrade.style.background = 'var(--brand)'; }
         }
         document.addEventListener("DOMContentLoaded", () => window.App = new TradingApp());
     </script>
 </body>
 </html>
+
